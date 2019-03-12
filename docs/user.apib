@@ -1,0 +1,111 @@
+# Group フォロー
+
+## ユーザーの投稿を確認する [GET /api/v1/users/{userid}] 
+
++ Parameters
+
+    + userid: hogehoge (string,required) - 確認したいユーザーのID
+
++ Response 200 (application/json)
+
+    + Attributes
+
+        + posts (object)
+            + 0 (object)
+                + posted_at: `2019-02-21-18-27-30` (string,required) - 投稿日時
+                + postid: `626f8162-66f2-4e44-84ba-2de3457693aa` (string,required) - 投稿自身が持つ固有のID
+                + userid: hogehoge (string,required) - 投稿したuserの固有ID
+                + screen_name: ほげほげ (string,required) - 投稿したuserのスクリーンネーム
+                + body: にゃーん (string,required) - 投稿内容
+
+## ユーザーをフォローする [POST /api/v1/users/follow]
+
++ Request
+
+    + Headers
+
+            Authorization: Bearer <jwt token>
+
+    + Attributes
+
+        + userid: hogehoge (string,required) - フォローしたいuserのid
+
++ Response 204
+
++ Response 409 (application/json)
+
+    既にフォローしていてフォローできない場合に返す
+
+    + Body
+
+            {"status_code": "409"}
+
+## ユーザーをフォローから外す [POST /api/v1/users/unfollow]
+
++ Request
+
+    + Headers
+
+            Authorization: Bearer <jwt token> 
+
+    + Attributes
+
+        + userid: hogehoge (string,required) - フォローしたいuserのid 
+
++ Response 204
+
++ Response 409 (application/json)
+
+    既にフォローを外していてフォローを外せない場合に返す
+
+    + Body
+
+            {"status_code": "409"}
+
+## ユーザーのフォローを確認する [GET /api/v1/users/{userid}/follow]
+
++ Parameters
+
+    + userid: hogehoge (string,required) - フォロー情報を参照されるユーザーのID
+
++ Request
+
+    + Headers
+
+            Authorization: Bearer <jwt token>
+
++ Response 200 (application/json)
+
+    成功した場合に返す
+
+    + Attributes
+
+        + userid: hogehoge (string,required) - フォロー情報を参照されるユーザーのID
+        + screen_name: ほげほげ (string,required) - フォロー情報を参照されるユーザーのスクリーンネーム
+        + follows (object)
+            + userid: fugafuga (string,required) - 確認したユーザーがフォローしているユーザーのID
+            + screen_name: ふがふが (string,required) - 確認したユーザーがフォローしているユーザーのスクリーンネーム
+
+## ユーザーのフォロワーを確認する [GET /api/v1/users/{userid}/follower]
+
++ Parameters
+
+    + userid: hogehoge (string,required) - フォロー情報を参照されるユーザーのID
+
++ Request
+
+    + Headers
+
+            Authorization: Bearer <jwt token>
+
++ Response 200 (application/json)
+
+    成功した場合に返す
+
+    + Attributes
+
+        + userid: hogehoge (string,required) - フォロワー情報を参照されるユーザーのID
+        + screen_name: ほげほげ (string,required) - フォロワー情報を参照されるユーザーのスクリーンネーム
+        + followers
+            + userid: fugafuga (string,required) - 確認したユーザーのフォロワーのID
+            + screen_name: ふがふが (string,required) - 確認したユーザーのフォロワーのスクリーンネーム

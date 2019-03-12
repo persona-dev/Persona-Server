@@ -1,0 +1,40 @@
+FORMAT: 1A
+# SNSのAPI仕様書(Draft)
+
+# このドキュメントについて
+
+このドキュメントは2019/02/22現在,私が開発しているこちらの[SNS](https://github.com/eniehack/simple-sns-go)のAPIです.
+あくまでもDraftです.  
+APIやこのドキュメントに要望やご意見等ありましたら,[Twitter](https://twitter.com/eniehack)か,[issue](https://github.com/eniehack/simple-sns-go/issues)までお願いします.
+
+## 使用するMIME Type
+
+サーバーからクライアント,クライアントからサーバーにおいて特別に記されていなければ`application/json`を用いて通信を行います.
+
+## ステータスコード
+
+使用するステータスコードは200,201,204,400,401,403,404,409,500の9つです.  
+204はBodyのないレスポンスをしますが,エラーなど特に返す情報がない場合,ステータスコードを`application/json`で`{"status_code":"401"}`のように返します.  
+
+## 未実装のもの
+
+このSNS自体がBeta版ですので,機能がとても少ないです.また,下記の機能は実装予定ですが,まだ見通しが立っていません.
+
++ リスト
++ [レイヤー](https://mobile.twitter.com/eniehack/status/1097092123281711104)
++ ブロック
++ ミュート
++ ハッシュタグ
++ 画像・動画アップロード
++ 投稿の修正
++ アバター
++ ユーザー設定
++ Streaming APIの実装
++ リツイート
++ ふぁぼ
++ 絵文字対応
++ メンション
+
+<!-- include(auth.apib) -->
+<!-- include(post.apib) -->
+<!-- include(user.apib) -->

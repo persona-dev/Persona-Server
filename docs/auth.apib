@@ -1,0 +1,51 @@
+# Group 認証
+
+## 認証シグナチャー取得 [/api/v1/auth/signature]
+
+### POST
+
+ユーザーIDとパスワードを受け取り,投稿の取得や入手に必要となるsignatureを発行します.
+signatureの形式はJWTです.
+
++ Request
+
+    + Attributes
+
+        + userid: hogehoge (string, required) - アットマークから始まるユーザー固有のID
+        + password: password (string, required) - パスワード
+
++ Response 200 (application/json)
+
+    + Attributes
+
+        + token: <jwt token> (string, required) - jwt signature
+
+## 新規登録 [/api/v1/auth/new]
+
+### POST
+
++ Request
+
+    + Attributes
+
+        + userid: hogehoge (string,required) - 固有のユーザーID
+        + screen_name: hogehoge (string,required) - ユーザーネーム            
+        + password: password (string, required) - パスワード
+
++ Response 201 (application/json)
+
+    登録に成功した際に返されます.
+
+    + Attributes
+
+        + status_code: 201 (string, required) - ステータスコード
+        + account_url: https://example.com/api/v1/users/hogehoge (string, required) - 登録されたユーザーのURL
+
++ Response 409 (application/json)
+
+    ユーザーネームが既に存在した際に返されます.
+
+    + Body
+
+            {"status_code": "409"}
+            

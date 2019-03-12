@@ -1,0 +1,108 @@
+# Group 投稿
+
+## 新規投稿 [POST /api/v1/posts/new]
+
+投稿をします.
+
++ Request
+
+    + Headers
+
+            Authorization: Bearer <jwt Token>
+
+    + Attributes
+
+        + body: hogehoge (string, required) - 投稿内容
+
++ Response 204
+
++ Response 401 (application/json)
+
+            {"status_code": "401"}
+
++ Response 500 (application/json)
+
+            {"status_code": "500"}
+
+## タイムラインの更新 [GET /api/v1/posts]
+
++ Request
+
+    + Headers
+
+            Authorization: Bearer <jwt token>
+
++ Response 200 (application/json)
+
+    + Attributes
+
+        + posts (object)
+            + 0 (object)
+                + posted_at: `2019-02-21-18-27-30` (string,required) - 投稿日時
+                + postid: `626f8162-66f2-4e44-84ba-2de3457693aa` (string,required) - 投稿自身が持つ固有のID
+                + userid: hogehoge (string,required) - 投稿したuserの固有ID
+                + screen_name: ほげほげ (string,required) - 投稿したuserのスクリーンネーム
+                + body: にゃーん (string,required) - 投稿内容
+
++ Response 401 (application/json)
+
+            {"status_code": "401"}
+
++ Response 500 (application/json)
+
+            {"status_code": "500"}
+
+## 投稿の参照・削除 [/api/v1/posts/{postid}]
+
+投稿の固有IDはuuidかulidです.
+投稿を参照します.
+投稿主であれば投稿を削除できます.
+
+### GET
+
++ Parameters
+
+    + postid: `626f8162-66f2-4e44-84ba-2de3457693aa` (string,required) - 投稿自身が持つ固有のID
+
++ Request
+
+    + Headers
+
+            Authorization: Bearer <jwt token>
+
++ Response 200 (application/json)
+
+    + Attributes
+
+        + post_at: `2019-02-21-18-27-30` (string,required) - 投稿された時間
+        + userid: hogehoge (string,required) - 投稿したuserのid
+        + screen_name: ほげほげ (string, required) - 投稿したuserのスクリーンネーム
+        + body: にゃーん (string,required) - 投稿内容
+
++ Response 404 (application/json)
+
+    投稿が存在しない場合に返すステータスコードです.
+
+    + Body
+
+            {"status_code": "404"}
+
+### DELETE
+
++ Parameters
+
+    + postid: `626f8162-66f2-4e44-84ba-2de3457693aa` (string,required) - 投稿自身が持つ固有のID
+
++ Request
+
+    + Headers
+
+            Authorization: Bearer <jwt token>
+
++ Response 409 (application/json)
+
+    投稿者以外が削除しようとした際に返すステータスコードです.
+
+    + Body
+
+            {"status_code": "409"}
