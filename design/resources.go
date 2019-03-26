@@ -24,6 +24,7 @@ var _ = Resource("Authorization", func() {
 		})
 		Response(OK, LoginMedia)
 		Response(Unauthorized)
+		UseTrait("error")
 	})
 	Action("register", func() {
 		Description("新規登録")

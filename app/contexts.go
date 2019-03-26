@@ -99,10 +99,34 @@ func (ctx *LoginAuthorizationContext) OK(r *Login) error {
 	return ctx.ResponseData.Service.Send(ctx.Context, 200, r)
 }
 
+// BadRequest sends a HTTP response with status code 400.
+func (ctx *LoginAuthorizationContext) BadRequest(r error) error {
+	if ctx.ResponseData.Header().Get("Content-Type") == "" {
+		ctx.ResponseData.Header().Set("Content-Type", "application/vnd.goa.error")
+	}
+	return ctx.ResponseData.Service.Send(ctx.Context, 400, r)
+}
+
 // Unauthorized sends a HTTP response with status code 401.
 func (ctx *LoginAuthorizationContext) Unauthorized() error {
 	ctx.ResponseData.WriteHeader(401)
 	return nil
+}
+
+// NotFound sends a HTTP response with status code 404.
+func (ctx *LoginAuthorizationContext) NotFound(r error) error {
+	if ctx.ResponseData.Header().Get("Content-Type") == "" {
+		ctx.ResponseData.Header().Set("Content-Type", "application/vnd.goa.error")
+	}
+	return ctx.ResponseData.Service.Send(ctx.Context, 404, r)
+}
+
+// InternalServerError sends a HTTP response with status code 500.
+func (ctx *LoginAuthorizationContext) InternalServerError(r error) error {
+	if ctx.ResponseData.Header().Get("Content-Type") == "" {
+		ctx.ResponseData.Header().Set("Content-Type", "application/vnd.goa.error")
+	}
+	return ctx.ResponseData.Service.Send(ctx.Context, 500, r)
 }
 
 // RegisterAuthorizationContext provides the Authorization register action context.

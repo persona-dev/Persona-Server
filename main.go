@@ -18,12 +18,15 @@ func main() {
 	service.Use(middleware.ErrorHandler(service, true))
 	service.Use(middleware.Recover())
 
+	// Mount "Authorization" controller
+	c := NewAuthorizationController(service)
+	app.MountAuthorizationController(service, c)
 	// Mount "Post" controller
-	c := NewPostController(service)
-	app.MountPostController(service, c)
+	c2 := NewPostController(service)
+	app.MountPostController(service, c2)
 
 	// Start service
-	if err := service.ListenAndServe(":8080"); err != nil {
+	if err := service.ListenAndServeTLS(":8080", "cert.pem", "key.pem"); err != nil {
 		service.LogError("startup", "err", err)
 	}
 
