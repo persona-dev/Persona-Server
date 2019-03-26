@@ -17,6 +17,94 @@ import (
 	"unicode/utf8"
 )
 
+// LoginAuthorizationContext provides the Authorization login action context.
+type LoginAuthorizationContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	Payload *LoginAuthorizationPayload
+}
+
+// NewLoginAuthorizationContext parses the incoming request URL and body, performs validations and creates the
+// context used by the Authorization controller login action.
+func NewLoginAuthorizationContext(ctx context.Context, r *http.Request, service *goa.Service) (*LoginAuthorizationContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	req.Request = r
+	rctx := LoginAuthorizationContext{Context: ctx, ResponseData: resp, RequestData: req}
+	return &rctx, err
+}
+
+// loginAuthorizationPayload is the Authorization login action payload.
+type loginAuthorizationPayload struct {
+	Password *string `form:"password,omitempty" json:"password,omitempty" yaml:"password,omitempty" xml:"password,omitempty"`
+	Userid   *string `form:"userid,omitempty" json:"userid,omitempty" yaml:"userid,omitempty" xml:"userid,omitempty"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *loginAuthorizationPayload) Validate() (err error) {
+	if payload.Userid == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "userid"))
+	}
+	if payload.Password == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "password"))
+	}
+	if payload.Userid != nil {
+		if utf8.RuneCountInString(*payload.Userid) > 15 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.userid`, *payload.Userid, utf8.RuneCountInString(*payload.Userid), 15, false))
+		}
+	}
+	return
+}
+
+// Publicize creates LoginAuthorizationPayload from loginAuthorizationPayload
+func (payload *loginAuthorizationPayload) Publicize() *LoginAuthorizationPayload {
+	var pub LoginAuthorizationPayload
+	if payload.Password != nil {
+		pub.Password = *payload.Password
+	}
+	if payload.Userid != nil {
+		pub.Userid = *payload.Userid
+	}
+	return &pub
+}
+
+// LoginAuthorizationPayload is the Authorization login action payload.
+type LoginAuthorizationPayload struct {
+	Password string `form:"password" json:"password" yaml:"password" xml:"password"`
+	Userid   string `form:"userid" json:"userid" yaml:"userid" xml:"userid"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *LoginAuthorizationPayload) Validate() (err error) {
+	if payload.Userid == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "userid"))
+	}
+	if payload.Password == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "password"))
+	}
+	if utf8.RuneCountInString(payload.Userid) > 15 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.userid`, payload.Userid, utf8.RuneCountInString(payload.Userid), 15, false))
+	}
+	return
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *LoginAuthorizationContext) OK(r *Login) error {
+	if ctx.ResponseData.Header().Get("Content-Type") == "" {
+		ctx.ResponseData.Header().Set("Content-Type", "application/vnd.login+json")
+	}
+	return ctx.ResponseData.Service.Send(ctx.Context, 200, r)
+}
+
+// Unauthorized sends a HTTP response with status code 401.
+func (ctx *LoginAuthorizationContext) Unauthorized() error {
+	ctx.ResponseData.WriteHeader(401)
+	return nil
+}
+
 // RegisterAuthorizationContext provides the Authorization register action context.
 type RegisterAuthorizationContext struct {
 	context.Context

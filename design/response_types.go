@@ -31,3 +31,18 @@ var PostDetailsMedia = MediaType("application/vnd.post+json", func() {
 		Attribute("body")
 	})
 })
+
+var LoginMedia = MediaType("application/vnd.login+json", func() {
+	Description("ログインが成功した際に認証トークンを返すレスポンス")
+	Attributes(func() {
+		Attribute("token", String, "認証トークン", func() {
+			Example("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.cThIIoDvwdueQB468K5xDc5633seEFoqwxjF_xSJyQQ")
+		})
+
+		Required("token")
+	})
+
+	View("default", func() {
+		Attribute("token")
+	})
+})

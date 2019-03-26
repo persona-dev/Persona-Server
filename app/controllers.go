@@ -30,6 +30,7 @@ func initService(service *goa.Service) {
 // AuthorizationController is the controller interface for the Authorization actions.
 type AuthorizationController interface {
 	goa.Muxer
+	Login(*LoginAuthorizationContext) error
 	Register(*RegisterAuthorizationContext) error
 }
 
@@ -37,6 +38,27 @@ type AuthorizationController interface {
 func MountAuthorizationController(service *goa.Service, ctrl AuthorizationController) {
 	initService(service)
 	var h goa.Handler
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewLoginAuthorizationContext(ctx, req, service)
+		if err != nil {
+			return err
+		}
+		// Build the payload
+		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.(*LoginAuthorizationPayload)
+		} else {
+			return goa.MissingPayloadError()
+		}
+		return ctrl.Login(rctx)
+	}
+	service.Mux.Handle("POST", "/api/v1/auth/signature", ctrl.MuxHandler("login", h, unmarshalLoginAuthorizationPayload))
+	service.LogInfo("mount", "ctrl", "Authorization", "action", "Login", "route", "POST /api/v1/auth/signature")
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		// Check if there was an error loading the request
@@ -56,9 +78,23 @@ func MountAuthorizationController(service *goa.Service, ctrl AuthorizationContro
 		}
 		return ctrl.Register(rctx)
 	}
-	h = handleSecurity("JWT", h, "api:access")
 	service.Mux.Handle("POST", "/api/v1/auth/new", ctrl.MuxHandler("register", h, unmarshalRegisterAuthorizationPayload))
-	service.LogInfo("mount", "ctrl", "Authorization", "action", "Register", "route", "POST /api/v1/auth/new", "security", "JWT")
+	service.LogInfo("mount", "ctrl", "Authorization", "action", "Register", "route", "POST /api/v1/auth/new")
+}
+
+// unmarshalLoginAuthorizationPayload unmarshals the request body into the context request data Payload field.
+func unmarshalLoginAuthorizationPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
+	payload := &loginAuthorizationPayload{}
+	if err := service.DecodeRequest(req, payload); err != nil {
+		return err
+	}
+	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
+		return err
+	}
+	goa.ContextRequest(ctx).Payload = payload.Publicize()
+	return nil
 }
 
 // unmarshalRegisterAuthorizationPayload unmarshals the request body into the context request data Payload field.

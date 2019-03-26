@@ -18,6 +18,48 @@ import (
 	"net/url"
 )
 
+// LoginAuthorizationPayload is the Authorization login action payload.
+type LoginAuthorizationPayload struct {
+	Password string `form:"password" json:"password" yaml:"password" xml:"password"`
+	Userid   string `form:"userid" json:"userid" yaml:"userid" xml:"userid"`
+}
+
+// LoginAuthorizationPath computes a request path to the login action of Authorization.
+func LoginAuthorizationPath() string {
+
+	return fmt.Sprintf("/api/v1/auth/signature")
+}
+
+// ログイン
+func (c *Client) LoginAuthorization(ctx context.Context, path string, payload *LoginAuthorizationPayload) (*http.Response, error) {
+	req, err := c.NewLoginAuthorizationRequest(ctx, path, payload)
+	if err != nil {
+		return nil, err
+	}
+	return c.Client.Do(ctx, req)
+}
+
+// NewLoginAuthorizationRequest create the request corresponding to the login action endpoint of the Authorization resource.
+func (c *Client) NewLoginAuthorizationRequest(ctx context.Context, path string, payload *LoginAuthorizationPayload) (*http.Request, error) {
+	var body bytes.Buffer
+	err := c.Encoder.Encode(payload, &body, "*/*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode body: %s", err)
+	}
+	scheme := c.Scheme
+	if scheme == "" {
+		scheme = "https"
+	}
+	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
+	req, err := http.NewRequest("POST", u.String(), &body)
+	if err != nil {
+		return nil, err
+	}
+	header := req.Header
+	header.Set("Content-Type", "application/json")
+	return req, nil
+}
+
 // RegisterAuthorizationPayload is the Authorization register action payload.
 type RegisterAuthorizationPayload struct {
 	Password   string `form:"password" json:"password" yaml:"password" xml:"password"`
@@ -58,10 +100,5 @@ func (c *Client) NewRegisterAuthorizationRequest(ctx context.Context, path strin
 	}
 	header := req.Header
 	header.Set("Content-Type", "application/json")
-	if c.JWTSigner != nil {
-		if err := c.JWTSigner.Sign(req); err != nil {
-			return nil, err
-		}
-	}
 	return req, nil
 }

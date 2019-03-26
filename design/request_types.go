@@ -25,3 +25,13 @@ var NewAccountPayload = Type("NewAccountPayload", func() {
 		Example("testpassword")
 	})
 })
+
+var LoginPayload = Type("LoginPayload", func() {
+	Attribute("userid", func() {
+		Example("fugafuga")
+		MaxLength(15)
+	})
+	Attribute("password", func() {
+		Example("testpassword")
+	})
+})

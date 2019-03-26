@@ -15,6 +15,50 @@ import (
 	"unicode/utf8"
 )
 
+// loginPayload user type.
+type loginPayload struct {
+	Password *string `form:"password,omitempty" json:"password,omitempty" yaml:"password,omitempty" xml:"password,omitempty"`
+	Userid   *string `form:"userid,omitempty" json:"userid,omitempty" yaml:"userid,omitempty" xml:"userid,omitempty"`
+}
+
+// Validate validates the loginPayload type instance.
+func (ut *loginPayload) Validate() (err error) {
+	if ut.Userid != nil {
+		if utf8.RuneCountInString(*ut.Userid) > 15 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`request.userid`, *ut.Userid, utf8.RuneCountInString(*ut.Userid), 15, false))
+		}
+	}
+	return
+}
+
+// Publicize creates LoginPayload from loginPayload
+func (ut *loginPayload) Publicize() *LoginPayload {
+	var pub LoginPayload
+	if ut.Password != nil {
+		pub.Password = ut.Password
+	}
+	if ut.Userid != nil {
+		pub.Userid = ut.Userid
+	}
+	return &pub
+}
+
+// LoginPayload user type.
+type LoginPayload struct {
+	Password *string `form:"password,omitempty" json:"password,omitempty" yaml:"password,omitempty" xml:"password,omitempty"`
+	Userid   *string `form:"userid,omitempty" json:"userid,omitempty" yaml:"userid,omitempty" xml:"userid,omitempty"`
+}
+
+// Validate validates the LoginPayload type instance.
+func (ut *LoginPayload) Validate() (err error) {
+	if ut.Userid != nil {
+		if utf8.RuneCountInString(*ut.Userid) > 15 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`type.userid`, *ut.Userid, utf8.RuneCountInString(*ut.Userid), 15, false))
+		}
+	}
+	return
+}
+
 // newAccountPayload user type.
 type newAccountPayload struct {
 	Password   *string `form:"password,omitempty" json:"password,omitempty" yaml:"password,omitempty" xml:"password,omitempty"`

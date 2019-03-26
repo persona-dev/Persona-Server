@@ -14,6 +14,36 @@ definitions:
     - body
     title: CreatePostPayload
     type: object
+  Login:
+    description: ログインが成功した際に認証トークンを返すレスポンス (default view)
+    example:
+      token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.cThIIoDvwdueQB468K5xDc5633seEFoqwxjF_xSJyQQ
+    properties:
+      token:
+        description: 認証トークン
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.cThIIoDvwdueQB468K5xDc5633seEFoqwxjF_xSJyQQ
+        type: string
+    required:
+    - token
+    title: 'Mediatype identifier: application/vnd.login+json; view=default'
+    type: object
+  LoginAuthorizationPayload:
+    example:
+      password: testpassword
+      userid: fugafuga
+    properties:
+      password:
+        example: testpassword
+        type: string
+      userid:
+        example: fugafuga
+        maxLength: 15
+        type: string
+    required:
+    - userid
+    - password
+    title: LoginAuthorizationPayload
+    type: object
   Post:
     description: 投稿の詳細な情報を返す際のレスポンス (default view)
     example:
@@ -116,11 +146,7 @@ info:
 paths:
   /auth/new:
     post:
-      description: |-
-        新規登録
-
-        Required security scopes:
-          * `api:access`
+      description: 新規登録
       operationId: Authorization#register
       parameters:
       - in: body
@@ -155,10 +181,31 @@ paths:
             $ref: '#/definitions/error'
       schemes:
       - https
-      security:
-      - JWT:
-        - api:access
       summary: register Authorization
+      tags:
+      - Authorization
+  /auth/signature:
+    post:
+      description: ログイン
+      operationId: Authorization#login
+      parameters:
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/LoginAuthorizationPayload'
+      produces:
+      - application/vnd.login+json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Login'
+        "401":
+          description: Unauthorized
+      schemes:
+      - https
+      summary: login Authorization
       tags:
       - Authorization
   /posts/{post_id}:
@@ -280,6 +327,8 @@ produces:
 responses:
   NoContent:
     description: No Content
+  Unauthorized:
+    description: Unauthorized
 schemes:
 - https
 securityDefinitions:

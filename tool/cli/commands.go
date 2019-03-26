@@ -28,6 +28,13 @@ import (
 )
 
 type (
+	// LoginAuthorizationCommand is the command line data structure for the login action of Authorization
+	LoginAuthorizationCommand struct {
+		Payload     string
+		ContentType string
+		PrettyPrint bool
+	}
+
 	// RegisterAuthorizationCommand is the command line data structure for the register action of Authorization
 	RegisterAuthorizationCommand struct {
 		Payload     string
@@ -96,24 +103,46 @@ Payload example:
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "reference",
-		Short: `投稿の参照`,
+		Use:   "login",
+		Short: `ログイン`,
 	}
-	tmp3 := new(ReferencePostCommand)
+	tmp3 := new(LoginAuthorizationCommand)
 	sub = &cobra.Command{
-		Use:   `post ["/api/v1/posts/POST_ID"]`,
+		Use:   `authorization ["/api/v1/auth/signature"]`,
 		Short: ``,
-		RunE:  func(cmd *cobra.Command, args []string) error { return tmp3.Run(c, args) },
+		Long: `
+
+Payload example:
+
+{
+   "password": "testpassword",
+   "userid": "fugafuga"
+}`,
+		RunE: func(cmd *cobra.Command, args []string) error { return tmp3.Run(c, args) },
 	}
 	tmp3.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp3.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
+		Use:   "reference",
+		Short: `投稿の参照`,
+	}
+	tmp4 := new(ReferencePostCommand)
+	sub = &cobra.Command{
+		Use:   `post ["/api/v1/posts/POST_ID"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp4.Run(c, args) },
+	}
+	tmp4.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp4.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
 		Use:   "register",
 		Short: `新規登録`,
 	}
-	tmp4 := new(RegisterAuthorizationCommand)
+	tmp5 := new(RegisterAuthorizationCommand)
 	sub = &cobra.Command{
 		Use:   `authorization ["/api/v1/auth/new"]`,
 		Short: ``,
@@ -126,10 +155,10 @@ Payload example:
    "screen_name": "ほげほげ",
    "userid": "hogehoge"
 }`,
-		RunE: func(cmd *cobra.Command, args []string) error { return tmp4.Run(c, args) },
+		RunE: func(cmd *cobra.Command, args []string) error { return tmp5.Run(c, args) },
 	}
-	tmp4.RegisterFlags(sub, c)
-	sub.PersistentFlags().BoolVar(&tmp4.PrettyPrint, "pp", false, "Pretty print response body")
+	tmp5.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp5.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
 	app.AddCommand(command)
 }
@@ -285,6 +314,39 @@ func boolArray(ins []string) ([]bool, error) {
 		vals = append(vals, *val)
 	}
 	return vals, nil
+}
+
+// Run makes the HTTP request corresponding to the LoginAuthorizationCommand command.
+func (cmd *LoginAuthorizationCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = "/api/v1/auth/signature"
+	}
+	var payload client.LoginAuthorizationPayload
+	if cmd.Payload != "" {
+		err := json.Unmarshal([]byte(cmd.Payload), &payload)
+		if err != nil {
+			return fmt.Errorf("failed to deserialize payload: %s", err)
+		}
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.LoginAuthorization(ctx, path, &payload)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *LoginAuthorizationCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
+	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
 }
 
 // Run makes the HTTP request corresponding to the RegisterAuthorizationCommand command.
