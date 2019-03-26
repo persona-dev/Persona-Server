@@ -14,8 +14,15 @@ var JWT = JWTSecurity("JWT", func() {
 
 var _ = Resource("Authorization", func() {
 	BasePath("/auth")
-	Security(JWT, func() {
-		Scope("api:access")
+	Action("login", func() {
+		Description("ログイン")
+		Routing(
+			POST("/signature"),
+		)
+		Payload(LoginPayload, func() {
+			Required("userid", "password")
+		})
+		Response(OK)
 	})
 	Action("register", func() {
 		Description("新規登録")
