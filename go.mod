@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da // indirect
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dimfeld/httppath v0.0.0-20170720192232-ee938bf73598 // indirect
 	github.com/dimfeld/httptreemux v5.0.1+incompatible // indirect
 	github.com/goadesign/goa v1.0.1-0.20190128063446-90bd33edff1a
