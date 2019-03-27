@@ -42,19 +42,21 @@ func (c *PostController) Create(ctx *app.CreatePostContext) error {
 	db, err := sql.Open("sqlite", "test.db")
 
 	if err != nil {
-		log.Error(err)
+		log.Println(err)
 		return ctx.InternalServerError(err)
 	}
+
+	defer db.Close()
 
 	if _, err := db.Exec(
 		"INSERT INTO posts (post_id, user_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
 		ulid,
 		"testuser",
-		ctx.Body,
+		ctx.Payload.Body,
 		now,
 		now,
 	); err != nil {
-		log.Error(err)
+		Log.Println(err)
 		return ctx.InternalServerError(err)
 	}
 
@@ -87,13 +89,13 @@ func (c *PostController) Reference(ctx *app.ReferencePostContext) error {
 
 	// PostIDが有効なものであるか確認する
 	if _, err := ulid.Parse(ctx.PostID); err != nil {
-		log.Error(err)
+		log.Println(err)
 		return ctx.BadRequest(err)
 	}
 
 	db, err := sql.Open("sqlite", "test.db")
 	if err != nil {
-		log.Error(err)
+		log.Println(err)
 	}
 
 	defer db.Close()
@@ -104,11 +106,11 @@ func (c *PostController) Reference(ctx *app.ReferencePostContext) error {
 	)
 
 	if err != nil {
-		log.Error(err)
+		log.Println(err)
 	}
 
 	if err := rows.Scan(&userID, &screenName, &body, &createdAt); err != nil {
-		log.Error(err)
+		log.Println(err)
 	}
 
 	res := &app.Post{}
