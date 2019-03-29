@@ -125,6 +125,7 @@ func Register(c echo.Context) error {
 
 	db, err := sql.Open("sqlite", "test.db")
 	if err != nil {
+		log.Println(err)
 		return echo.ErrInternalServerError
 	}
 	defer db.Close()
@@ -173,6 +174,7 @@ func Register(c echo.Context) error {
 		time.Now(),
 		password,
 	); err != nil {
+		log.Println(err)
 		return echo.ErrInternalServerError
 	}
 
