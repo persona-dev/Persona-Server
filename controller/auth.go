@@ -3,7 +3,6 @@ package controller
 import (
 	"crypto/rand"
 	"crypto/subtle"
-	"database/sql"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -18,7 +17,6 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
@@ -39,16 +37,7 @@ type Argon2Params struct {
 	keyLength   uint32
 }
 
-func Login(c echo.Context) error {
-
-	// DBへの接続
-	db, err := sql.Open("sqlite3", "test.db")
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"status_code": "500",
-		})
-	}
-	defer db.Close()
+func (h *Handler) Login(c echo.Context) error {
 
 	userid := c.FormValue("userid")
 
@@ -57,6 +46,8 @@ func Login(c echo.Context) error {
 	}
 
 	var password string
+	db := h.DB
+	defer db.Close()
 
 	if err := db.QueryRow(
 		"SELECT password FROM users WHERE user_id = ?",
@@ -122,14 +113,7 @@ func Login(c echo.Context) error {
 	})
 }
 
-func Register(c echo.Context) error {
-
-	db, err := sql.Open("sqlite3", "test.db")
-	if err != nil {
-		log.Println(err)
-		return echo.ErrInternalServerError
-	}
-	defer db.Close()
+func (h *Handler) Register(c echo.Context) error {
 
 	userid := c.FormValue("userid")
 
@@ -139,6 +123,9 @@ func Register(c echo.Context) error {
 	}
 
 	//TODO:英字はすべて小文字に変換する
+
+	db := h.DB
+	defer db.Close()
 
 	if err := db.QueryRow(
 		"SELECT user_id FROM users WHERE user_id = ?",

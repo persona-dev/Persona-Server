@@ -1,12 +1,15 @@
 package main
 
 import (
+	"database/sql"
+
 	"github.com/eniehack/simple-sns-go/controller"
 
 	"io/ioutil"
 
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
@@ -22,12 +25,19 @@ func main() {
 		Claims:        controller.Claims{},
 	}
 
+	db, err := sql.Open("sqlite3", "test.db")
+	if err != nil {
+		e.Logger.Fatal(err)
+	}
+
+	h := &controller.Handler{DB: db}
+
 	Authg := e.Group("/api/v1/auth")
-	Authg.POST("/signature", controller.Login)
-	Authg.POST("/new", controller.Register)
+	Authg.POST("/signature", h.Login)
+	Authg.POST("/new", h.Register)
 
 	Postg := e.Group("api/v1/posts")
-	Postg.POST("/new", controller.CreatePosts, middleware.JWTWithConfig(config))
+	Postg.POST("/new", h.CreatePosts, middleware.JWTWithConfig(config))
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
