@@ -3,7 +3,7 @@ package main
 import (
 	"database/sql"
 
-	"github.com/eniehack/simple-sns-go/controller"
+	"github.com/eniehack/simple-sns-go/handler"
 
 	"io/ioutil"
 
@@ -22,7 +22,7 @@ func main() {
 	config := middleware.JWTConfig{
 		SigningKey:    pubkey,
 		SigningMethod: "RS512",
-		Claims:        controller.Claims{},
+		Claims:        handler.Claims{},
 	}
 
 	db, err := sql.Open("sqlite3", "test.db")
@@ -30,7 +30,7 @@ func main() {
 		e.Logger.Fatal(err)
 	}
 
-	h := &controller.Handler{DB: db}
+	h := &handler.Handler{DB: db}
 
 	Authg := e.Group("/api/v1/auth")
 	Authg.POST("/signature", h.Login)
