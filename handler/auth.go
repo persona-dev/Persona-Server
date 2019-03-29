@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -18,24 +17,6 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo"
 )
-
-var (
-	ErrInvaildHash         = errors.New("the encoded hash is not in the correct format.")
-	ErrIncompatibleVersion = errors.New("incompatible version of argon2")
-)
-
-type Claims struct {
-	Scope string `json:"foo"`
-	jwt.StandardClaims
-}
-
-type Argon2Params struct {
-	memory      uint32
-	iterations  uint32
-	parallelism uint8
-	saltLength  uint32
-	keyLength   uint32
-}
 
 func (h *Handler) Login(c echo.Context) error {
 
@@ -91,7 +72,7 @@ func (h *Handler) Login(c echo.Context) error {
 		return echo.ErrInternalServerError
 	}
 
-	claims := Claims{
+	var claims = Claims{
 		"api:access",
 		jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(15 * time.Minute).Unix(),
@@ -139,7 +120,7 @@ func (h *Handler) Register(c echo.Context) error {
 	// passwordをArgon2idで暗号化
 	// 参考サイト(MIT License):https://www.alexedwards.net/blog/how-to-hash-and-verify-passwords-with-argon2-in-go
 
-	p := &Argon2Params{
+	var p = &Argon2Params{
 		memory:      64 * 1024,
 		iterations:  3,
 		parallelism: 2,
