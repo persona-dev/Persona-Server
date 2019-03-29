@@ -8,6 +8,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/oklog/ulid"
 )
 
