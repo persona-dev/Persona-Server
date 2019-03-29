@@ -41,7 +41,7 @@ type Argon2Params struct {
 func Login(c echo.Context) error {
 
 	// DBへの接続
-	db, err := sql.Open("sqlite", "test.db")
+	db, err := sql.Open("sqlite3", "test.db")
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"status_code": "500",
@@ -123,7 +123,7 @@ func Login(c echo.Context) error {
 
 func Register(c echo.Context) error {
 
-	db, err := sql.Open("sqlite", "test.db")
+	db, err := sql.Open("sqlite3", "test.db")
 	if err != nil {
 		log.Println(err)
 		return echo.ErrInternalServerError
