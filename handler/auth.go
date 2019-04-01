@@ -34,6 +34,7 @@ func (h *Handler) Login(c echo.Context) error {
 		"SELECT password FROM users WHERE user_id = ?",
 		userid,
 	).Scan(&password); err != nil {
+		log.Println(err)
 		return echo.ErrBadRequest
 	}
 	// 送信されてきたpasswordの検証
@@ -55,6 +56,7 @@ func (h *Handler) Login(c echo.Context) error {
 		time.Now(),
 		userid,
 	); err != nil {
+		log.Println(err)
 		return echo.ErrInternalServerError
 	}
 
