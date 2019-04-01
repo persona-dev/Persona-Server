@@ -42,6 +42,7 @@ func (h *Handler) Login(c echo.Context) error {
 	match, err := comparePasswordAndHash(c.FormValue("password"), password)
 	if err != nil {
 		log.Println(err)
+		return echo.ErrInternalServerError
 	}
 	if !match {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
@@ -74,7 +75,7 @@ func (h *Handler) Login(c echo.Context) error {
 		return echo.ErrInternalServerError
 	}
 
-	var claims = Claims{
+	claims := &Claims{
 		"api:access",
 		jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(15 * time.Minute).Unix(),
@@ -131,7 +132,6 @@ func (h *Handler) Register(c echo.Context) error {
 	}
 
 	password, err := generatePassword(c.FormValue("password"), p)
-
 	if err != nil {
 		return echo.ErrInternalServerError
 	}
