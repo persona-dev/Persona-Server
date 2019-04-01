@@ -2,10 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"io/ioutil"
+	"log"
 
 	"github.com/eniehack/simple-sns-go/handler"
-
-	"io/ioutil"
 
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -14,20 +14,19 @@ import (
 
 func main() {
 
-	pubkey, _ := ioutil.ReadFile("public-key.pub")
+	pubkey, err := ioutil.ReadFile("public-key.pem")
+	if err != nil {
+		log.Println(err)
+	}
+
 	e := echo.New()
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	config := middleware.JWTConfig{
-		SigningKey:    pubkey,
-		SigningMethod: "RS512",
-		Claims:        handler.Claims{},
-	}
 
 	db, err := sql.Open("sqlite3", "test.db")
 	if err != nil {
-		e.Logger.Fatal(err)
+		e.Logger.Fatal("db connection", err)
 	}
 
 	h := &handler.Handler{DB: db}
@@ -36,8 +35,14 @@ func main() {
 	Authg.POST("/signature", h.Login)
 	Authg.POST("/new", h.Register)
 
-	Postg := e.Group("api/v1/posts")
-	Postg.POST("/new", h.CreatePosts, middleware.JWTWithConfig(config))
+	Postg := e.Group("/api/v1/posts")
+	config := middleware.JWTConfig{
+		SigningKey:    pubkey,
+		SigningMethod: "RS512",
+		Claims:        &handler.Claims{},
+	}
+	Postg.Use(middleware.JWTWithConfig(config))
+	Postg.POST("/new", h.CreatePosts)
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
