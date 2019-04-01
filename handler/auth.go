@@ -137,7 +137,7 @@ func (h *Handler) Register(c echo.Context) error {
 
 	if _, err := db.Exec(
 		"INSERT INTO users (user_id, screen_name, created_at, updated_at, password) VALUES (?, ?, ?, ?, ?)",
-		userid,
+		strings.ToLower(userid),
 		c.FormValue("screen_name"),
 		time.Now(),
 		time.Now(),
