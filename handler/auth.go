@@ -51,7 +51,7 @@ func (h *Handler) Login(c echo.Context) error {
 
 	// updated_atの更新
 
-	if err := db.QueryRow(
+	if _, err := db.Exec(
 		"UPDATE users SET updated_at = ? WHERE user_id = ?",
 		time.Now(),
 		userid,
