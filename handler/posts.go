@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"time"
@@ -12,15 +14,16 @@ import (
 
 func (h *Handler) CreatePosts(c echo.Context) error {
 
-	// TODO:jwtのミドルウェアを挟む
-
 	user := c.Get("user").(*jwt.Token)
 	claims := user.Claims.(*Claims)
 	userID := claims.StandardClaims.Audience
+	fmt.Println(userID)
 
 	body := c.FormValue("body")
+	fmt.Println(body)
 	if body == "" {
-		return echo.ErrBadRequest
+		log.Println("No body.")
+		return echo.ErrInternalServerError
 	}
 
 	now := time.Now()
@@ -38,7 +41,8 @@ func (h *Handler) CreatePosts(c echo.Context) error {
 		now,
 		now,
 	); err != nil {
-		return err
+		log.Println("INSERT Err", err)
+		return echo.ErrBadRequest
 	}
 
 	return c.NoContent(http.StatusOK)
