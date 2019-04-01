@@ -13,7 +13,7 @@ type (
 	}
 
 	Claims struct {
-		Scope string `json:"foo"`
+		Scope string `json:"scope"`
 		jwt.StandardClaims
 	}
 
