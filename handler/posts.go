@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"time"
 
