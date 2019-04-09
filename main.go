@@ -63,6 +63,7 @@ func main() {
 	if err != nil {
 		e.Logger.Fatal("db connection", err)
 	}
+	db.SetConnMaxLifetime(1)
 
 	h := &handler.Handler{DB: db}
 
