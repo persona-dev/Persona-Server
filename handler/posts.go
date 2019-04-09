@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"crypto/rand"
 	"fmt"
 	"log"
 	"math/rand"
@@ -27,15 +28,14 @@ func (h *Handler) CreatePosts(c echo.Context) error {
 	}
 
 	now := time.Now()
-	entropy := ulid.Monotonic(rand.New(rand.NewSource(now.UnixNano())), 0)
-	ulid := ulid.MustNew(ulid.Timestamp(now), entropy)
+	ulid := ulid.MustNew(ulid.Now(), rand.Reader)
 
 	db := h.DB
 	defer db.Close()
 
 	if _, err := db.Exec(
 		"INSERT INTO posts (post_id, user_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-		ulid,
+		ulid.String(),
 		userID,
 		body,
 		now,
