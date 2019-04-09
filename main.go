@@ -51,7 +51,7 @@ func LookupPublicKey() (*rsa.PublicKey, error) {
 	}
 	ParsedKey, err := jwt.ParseRSAPublicKeyFromPEM(Key)
 	return ParsedKey, err
-	}
+}
 
 func main() {
 	e := echo.New()
