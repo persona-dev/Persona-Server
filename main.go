@@ -1,24 +1,59 @@
 package main
 
 import (
+	"crypto/rsa"
 	"database/sql"
+	"fmt"
 	"io/ioutil"
-	"log"
+	"net/http"
+	"strings"
 
 	"github.com/eniehack/simple-sns-go/handler"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func main() {
+func JWTAuthentication(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		AuthorizationHeader := c.Request().Header.Get("Authorization")
+		SplitAuthorization := strings.Split(AuthorizationHeader, " ")
+		if SplitAuthorization[0] != "Bearer" {
+			return &echo.HTTPError{
+				Code:    http.StatusUnauthorized,
+				Message: "invalid token.",
+			}
+		}
+		token, err := jwt.Parse(SplitAuthorization[1], func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+			}
+			return LookupPublicKey()
+		})
+		if err != nil || !token.Valid {
+			return &echo.HTTPError{
+				Code:     http.StatusUnauthorized,
+				Message:  "invalid token.",
+				Internal: err,
+			}
+		}
+		c.Set("token", token)
+		return next(c)
+	}
+}
 
-	pubkey, err := ioutil.ReadFile("public-key.pem")
+func LookupPublicKey() (*rsa.PublicKey, error) {
+	Key, err := ioutil.ReadFile("public-key.pem")
 	if err != nil {
-		log.Println(err)
+		return nil, err
+	}
+	ParsedKey, err := jwt.ParseRSAPublicKeyFromPEM(Key)
+	return ParsedKey, err
 	}
 
+func main() {
 	e := echo.New()
 
 	e.Use(middleware.Logger())
