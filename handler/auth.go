@@ -75,17 +75,14 @@ func (h *Handler) Login(c echo.Context) error {
 		return echo.ErrInternalServerError
 	}
 
-	claims := &Claims{
-		"api:access",
-		jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(15 * time.Minute).Unix(),
+	token := jwt.NewWithClaims(jwt.SigningMethodRS512,
+		&jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Minute * 5).Unix(),
 			IssuedAt:  time.Now().Unix(),
-			NotBefore: time.Now().Add(15 * time.Second).Unix(),
+			NotBefore: time.Now().Add(time.Second * 5).Unix(),
 			Audience:  userid,
 		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
+	)
 	t, err := token.SignedString(Key)
 	if err != nil {
 		log.Println(err)

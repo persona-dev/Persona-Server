@@ -71,12 +71,7 @@ func main() {
 	Authg.POST("/new", h.Register)
 
 	Postg := e.Group("/api/v1/posts")
-	config := middleware.JWTConfig{
-		SigningKey:    pubkey,
-		SigningMethod: "RS512",
-		Claims:        &handler.Claims{},
-	}
-	Postg.Use(middleware.JWTWithConfig(config))
+	Postg.Use(JWTAuthentication)
 	Postg.POST("/new", h.CreatePosts)
 
 	e.Logger.Fatal(e.Start(":8080"))

@@ -14,9 +14,9 @@ import (
 
 func (h *Handler) CreatePosts(c echo.Context) error {
 
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*Claims)
-	userID := claims.StandardClaims.Audience
+	user := c.Get("token").(*jwt.Token)
+	claims := user.Claims.(jwt.MapClaims)
+	userID := claims["aud"]
 	fmt.Println(userID)
 
 	body := c.FormValue("body")
