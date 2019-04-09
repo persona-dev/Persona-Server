@@ -42,7 +42,7 @@ func (h *Handler) CreatePosts(c echo.Context) error {
 		now,
 	); err != nil {
 		log.Println("INSERT Err", err)
-		return echo.ErrBadRequest
+		return echo.ErrInternalServerError
 	}
 
 	return c.NoContent(http.StatusOK)
