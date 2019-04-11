@@ -20,20 +20,18 @@ import (
 
 func (h *Handler) Login(c echo.Context) error {
 
-	userid := c.FormValue("userid")
-
-	if userid == "" {
+	if c.FormValue("userid") == "" {
 		return echo.ErrBadRequest
 	}
 
-	var password string
+	var password, UserID string
 	db := h.DB
 
 	if err := db.QueryRow(
-		"SELECT password FROM users WHERE user_id = ? OR email = ?",
-		userid,
-		userid,
-	).Scan(&password); err != nil {
+		"SELECT password, user_id FROM users WHERE user_id = ? OR email = ?",
+		c.FormValue("userid"),
+		c.FormValue("userid"),
+	).Scan(&password, &UserID); err != nil {
 		log.Println(err)
 		return echo.ErrBadRequest
 	}
@@ -55,7 +53,7 @@ func (h *Handler) Login(c echo.Context) error {
 	if _, err := db.Exec(
 		"UPDATE users SET updated_at = ? WHERE user_id = ?",
 		time.Now(),
-		userid,
+		UserID,
 	); err != nil {
 		log.Println(err)
 		return echo.ErrInternalServerError
@@ -80,7 +78,7 @@ func (h *Handler) Login(c echo.Context) error {
 			ExpiresAt: time.Now().Add(time.Minute * 5).Unix(),
 			IssuedAt:  time.Now().Unix(),
 			NotBefore: time.Now().Add(time.Second * 5).Unix(),
-			Audience:  userid,
+			Audience:  UserID,
 		},
 	)
 	t, err := token.SignedString(Key)
