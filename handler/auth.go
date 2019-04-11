@@ -30,7 +30,8 @@ func (h *Handler) Login(c echo.Context) error {
 	db := h.DB
 
 	if err := db.QueryRow(
-		"SELECT password FROM users WHERE user_id = ?",
+		"SELECT password FROM users WHERE user_id = ? OR email = ?",
+		userid,
 		userid,
 	).Scan(&password); err != nil {
 		log.Println(err)
@@ -95,7 +96,8 @@ func (h *Handler) Login(c echo.Context) error {
 
 func (h *Handler) Register(c echo.Context) error {
 
-	userid := c.FormValue("userid")
+	userid := strings.ToLower(c.FormValue("userid"))
+	EMail := c.FormValue("email")
 
 	//TODO:英数字のみであるか検証する
 	if len := len(userid); CheckRegexp(`[^a-zA-Z0-9_]+`, userid) || len > 15 || len == 0 {
@@ -108,7 +110,16 @@ func (h *Handler) Register(c echo.Context) error {
 
 	if err := db.QueryRow(
 		"SELECT user_id FROM users WHERE user_id = ?",
-		strings.ToLower(userid),
+		userid,
+	); err == nil {
+		return c.JSON(http.StatusConflict, echo.Map{
+			"status_code": "409",
+		})
+	}
+
+	if err := db.QueryRow(
+		"SELECT email FROM users WHERE email = ?",
+		EMail,
 	); err == nil {
 		return c.JSON(http.StatusConflict, echo.Map{
 			"status_code": "409",
@@ -133,8 +144,9 @@ func (h *Handler) Register(c echo.Context) error {
 	// 指定されたデータをもとにINSERT
 
 	if _, err := db.Exec(
-		"INSERT INTO users (user_id, screen_name, created_at, updated_at, password) VALUES (?, ?, ?, ?, ?)",
-		strings.ToLower(userid),
+		"INSERT INTO users (user_id, email, screen_name, created_at, updated_at, password) VALUES (?, ?, ?, ?, ?, ?)",
+		userid,
+		EMail,
 		c.FormValue("screen_name"),
 		time.Now(),
 		time.Now(),
