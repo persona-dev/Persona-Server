@@ -30,7 +30,6 @@ func (h *Handler) CreatePosts(c echo.Context) error {
 	ulid := ulid.MustNew(ulid.Now(), rand.Reader)
 
 	db := h.DB
-	defer db.Close()
 
 	if _, err := db.Exec(
 		"INSERT INTO posts (post_id, user_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",

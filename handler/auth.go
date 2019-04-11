@@ -28,7 +28,6 @@ func (h *Handler) Login(c echo.Context) error {
 
 	var password string
 	db := h.DB
-	defer db.Close()
 
 	if err := db.QueryRow(
 		"SELECT password FROM users WHERE user_id = ?",
@@ -106,7 +105,6 @@ func (h *Handler) Register(c echo.Context) error {
 	//TODO:英字はすべて小文字に変換する
 
 	db := h.DB
-	defer db.Close()
 
 	if err := db.QueryRow(
 		"SELECT user_id FROM users WHERE user_id = ?",
