@@ -14,6 +14,7 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/rubenv/sql-migrate"
 )
 
 func JWTAuthentication(next echo.HandlerFunc) echo.HandlerFunc {
@@ -65,6 +66,16 @@ func main() {
 	}
 	db.SetConnMaxLifetime(1)
 	defer db.Close()
+
+	migrations := &migrate.FileMigrationSource{
+		Dir: "migrations/sqlite3",
+	}
+	n, err := migrate.Exec(db, "sqlite3", migrations, migrate.Up)
+	if err != nil {
+		log.Println(err)
+	} else {
+		log.Println("Applied %d migrations", n)
+	}
 
 	h := &handler.Handler{DB: db}
 
