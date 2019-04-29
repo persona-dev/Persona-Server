@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/eniehack/simple-sns-go/handler"
@@ -87,5 +89,11 @@ func main() {
 	Postg.Use(JWTAuthentication)
 	Postg.POST("/new", h.CreatePosts)
 
-	e.Logger.Fatal(e.Start(":8080"))
+	e.Logger.Fatal(
+		e.Start(
+			fmt.Sprintf(
+				":%s", os.Getenv("PORT"),
+			),
+		),
+	)
 }
