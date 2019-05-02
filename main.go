@@ -61,6 +61,10 @@ func main() {
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodOptions, http.MethodDelete},
+		AllowHeaders: []string{echo.headerAuthorization, echo.headerContentType},
+	}))
 
 	db, err := sql.Open("sqlite3", "test.db")
 	if err != nil {
