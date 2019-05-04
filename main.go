@@ -63,7 +63,7 @@ func main() {
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowMethods:  []string{http.MethodGet, http.MethodPost, http.MethodOptions, http.MethodDelete},
-		AllowHeaders:  []string{"Authorization", "ContentType"},
+		AllowHeaders:  []string{"Authorization", "Content-Type"},
 		MaxAge:        3600,
 		ExposeHeaders: []string{"Authorization"},
 	}))
