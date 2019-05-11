@@ -79,7 +79,7 @@ func SetUpDataBase(DataBaseName string) (*sql.DB, error) {
 		} */
 		return db, nil
 	case "postgres":
-		db, err := sql.Open("pq", os.Getenv("DATABASE_URL"))
+		db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 		if err != nil {
 			return nil, errors.New(fmt.Sprintf("failed to connect Database: %s", err))
 		}
@@ -87,7 +87,7 @@ func SetUpDataBase(DataBaseName string) (*sql.DB, error) {
 		migrations := &migrate.FileMigrationSource{
 			Dir: "migrations/postgres",
 		}
-		_, err = migrate.Exec(db, "pq", migrations, migrate.Up)
+		_, err = migrate.Exec(db, "postgres", migrations, migrate.Up)
 		if err != nil {
 			return nil, errors.New(fmt.Sprintf("failed migrations: %s", err))
 		} /*else {
