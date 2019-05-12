@@ -16,6 +16,12 @@ type (
 		saltLength  uint32
 		keyLength   uint32
 	}
+	RegisterParams struct {
+		UserID     string
+		EMail      string
+		ScreenName string
+		Password   string
+	}
 )
 
 var (

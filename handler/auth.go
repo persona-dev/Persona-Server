@@ -96,11 +96,15 @@ func (h *Handler) Login(c echo.Context) error {
 
 func (h *Handler) Register(c echo.Context) error {
 
-	userid := strings.ToLower(c.FormValue("userid"))
-	EMail := c.FormValue("email")
+	User = &RegisterParams{
+		UserID:     strings.ToLower(c.FormValue("userid")),
+		EMail:      c.FormValue("email"),
+		ScreenName: c.FormValue("screen_name"),
+		Password:   c.FormValue("password"),
+	}
 
 	//TODO:英数字のみであるか検証する
-	if len := len(userid); CheckRegexp(`[^a-zA-Z0-9_]+`, userid) || len > 15 || len == 0 {
+	if len := len(User.UserID); CheckRegexp(`[^a-zA-Z0-9_]+`, userid) || len > 15 || len == 0 {
 		return echo.ErrBadRequest
 	}
 
@@ -134,7 +138,7 @@ func (h *Handler) Register(c echo.Context) error {
 		keyLength:   32,
 	}
 
-	password, err := generatePassword(c.FormValue("password"), p)
+	password, err := generatePassword(User.Password, p)
 	if err != nil {
 		return echo.ErrInternalServerError
 	}
