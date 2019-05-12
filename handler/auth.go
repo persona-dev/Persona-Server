@@ -3,6 +3,7 @@ package handler
 import (
 	"crypto/rand"
 	"crypto/subtle"
+	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -15,6 +16,7 @@ import (
 	"golang.org/x/crypto/argon2"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo"
 )
 
@@ -106,24 +108,21 @@ func (h *Handler) Register(c echo.Context) error {
 
 	db := h.DB
 
-	if err := db.QueryRow(
-		"SELECT user_id FROM users WHERE user_id = ?",
-		userid,
-	); err == nil {
+	if conflict, err := CheckUniqueUserID(userid); !conflict && err == sql.ErrNoRows {
 		return c.JSON(http.StatusConflict, echo.Map{
 			"status_code": "409",
 		})
+	} else if err != nil {
+		log.Println(err)
 	}
 
-	if err := db.QueryRow(
-		"SELECT email FROM users WHERE email = ?",
-		EMail,
-	); err == nil {
+	if conflict, err := CheckUniqueEmail(EMail); !conflict && err == sql.ErrNoRows {
 		return c.JSON(http.StatusConflict, echo.Map{
 			"status_code": "409",
 		})
+	} else if err != nil {
+		log.Println(err)
 	}
-
 	// passwordをArgon2idで暗号化
 	// 参考サイト(MIT License):https://www.alexedwards.net/blog/how-to-hash-and-verify-passwords-with-argon2-in-go
 
@@ -141,6 +140,7 @@ func (h *Handler) Register(c echo.Context) error {
 	}
 	// 指定されたデータをもとにINSERT
 
+	// err := InsertUserData() (error)
 	if _, err := db.Exec(
 		"INSERT INTO users (user_id, email, screen_name, created_at, updated_at, password) VALUES (?, ?, ?, ?, ?, ?)",
 		userid,
@@ -242,4 +242,36 @@ func decodeHash(encodedHash string) (p *Argon2Params, salt, hash []byte, err err
 
 func CheckRegexp(reg, str string) bool {
 	return regexp.MustCompile(reg).Match([]byte(str))
+}
+
+func CheckUniqueUserID(UserID string) (bool, error) {
+	BindParams := map[string]interface{}{
+		"UserID": UserID,
+	}
+	Query, Params, err := sqlx.Named(
+		"SELECT user_id FROM users WHERE user_id = :UserID",
+		BindParams,
+	)
+	if err := db.QueryRowx(Query, Params); err == sql.ErrNoRows {
+		return true, nil
+	} else if err != nil {
+		return false, nil
+	}
+	return false, nil
+}
+
+func CheckUniqueEmail(EMail string) (bool, error) {
+	BindParams := map[string]interface{}{
+		"EMail": EMail,
+	}
+	Query, Params, err := sqlx.Named(
+		"SELECT email FROM users WHERE email = :EMail",
+		BindParams,
+	)
+	if err := db.QueryRowx(Query, Params); err == sql.ErrNoRows {
+		return true, nil
+	} else if err != nil {
+		return false, nil
+	}
+	return false, nil
 }
