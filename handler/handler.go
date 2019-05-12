@@ -1,13 +1,14 @@
 package handler
 
 import (
-	"database/sql"
 	"errors"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type (
 	Handler struct {
-		DB *sql.DB
+		DB *sqlx.DB
 	}
 	Argon2Params struct {
 		memory      uint32

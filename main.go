@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/rsa"
-	"database/sql"
 	"errors"
 	"flag"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 	"github.com/eniehack/simple-sns-go/handler"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	_ "github.com/lib/pq"
@@ -59,10 +59,10 @@ func LookupPublicKey() (*rsa.PublicKey, error) {
 	return ParsedKey, err
 }
 
-func SetUpDataBase(DataBaseName string) (*sql.DB, error) {
+func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
 	switch DataBaseName {
 	case "sqlite3":
-		db, err := sql.Open("sqlite3", "test.db")
+		db, err := sqlx.Open("sqlite3", "test.db")
 		if err != nil {
 			return nil, errors.New(fmt.Sprintf("failed to connect Database: %s", err))
 		}
@@ -70,7 +70,7 @@ func SetUpDataBase(DataBaseName string) (*sql.DB, error) {
 		migrations := &migrate.FileMigrationSource{
 			Dir: "migrations/sqlite3",
 		}
-		_, err = migrate.Exec(db, "sqlite3", migrations, migrate.Up)
+		_, err = migrate.Exec(db.DB, "sqlite3", migrations, migrate.Up)
 		if err != nil {
 			log.Println(err)
 			return nil, errors.New(fmt.Sprintf("failed migrations: %s", err))
@@ -79,7 +79,7 @@ func SetUpDataBase(DataBaseName string) (*sql.DB, error) {
 		} */
 		return db, nil
 	case "postgres":
-		db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+		db, err := sqlx.Open("postgres", os.Getenv("DATABASE_URL"))
 		if err != nil {
 			return nil, errors.New(fmt.Sprintf("failed to connect Database: %s", err))
 		}
@@ -87,7 +87,7 @@ func SetUpDataBase(DataBaseName string) (*sql.DB, error) {
 		migrations := &migrate.FileMigrationSource{
 			Dir: "migrations/postgres",
 		}
-		_, err = migrate.Exec(db, "postgres", migrations, migrate.Up)
+		_, err = migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
 		if err != nil {
 			return nil, errors.New(fmt.Sprintf("failed migrations: %s", err))
 		} /*else {

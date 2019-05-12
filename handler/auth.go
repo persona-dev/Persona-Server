@@ -3,8 +3,8 @@ package handler
 import (
 	"crypto/rand"
 	"crypto/subtle"
-	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -96,36 +96,37 @@ func (h *Handler) Login(c echo.Context) error {
 
 func (h *Handler) Register(c echo.Context) error {
 
-	User = &RegisterParams{
-		UserID:     strings.ToLower(c.FormValue("userid")),
-		EMail:      c.FormValue("email"),
-		ScreenName: c.FormValue("screen_name"),
-		Password:   c.FormValue("password"),
-	}
-
+	User := new(RegisterParams)
+	User.ScreenName = c.FormValue("screen_name")
 	//TODO:英数字のみであるか検証する
-	if len := len(User.UserID); CheckRegexp(`[^a-zA-Z0-9_]+`, userid) || len > 15 || len == 0 {
+	if len := len(User.UserID); CheckRegexp(`[^a-zA-Z0-9_]+`, User.UserID) || len > 15 || len == 0 {
 		return echo.ErrBadRequest
 	}
 
 	//TODO:英字はすべて小文字に変換する
 
-	db := h.DB
-
-	if conflict, err := CheckUniqueUserID(userid); !conflict && err == sql.ErrNoRows {
-		return c.JSON(http.StatusConflict, echo.Map{
-			"status_code": "409",
-		})
-	} else if err != nil {
+	UserIDConflict, err := h.CheckUniqueUserID(strings.ToLower(c.FormValue("userid")))
+	if err != nil {
 		log.Println(err)
 	}
-
-	if conflict, err := CheckUniqueEmail(EMail); !conflict && err == sql.ErrNoRows {
+	if !UserIDConflict {
 		return c.JSON(http.StatusConflict, echo.Map{
 			"status_code": "409",
 		})
-	} else if err != nil {
+	} else {
+		User.UserID = strings.ToLower(c.FormValue("userid"))
+	}
+
+	EMailConflict, err := h.CheckUniqueEmail(c.FormValue("email"))
+	if err != nil {
 		log.Println(err)
+	}
+	if !EMailConflict {
+		return c.JSON(http.StatusConflict, echo.Map{
+			"status_code": "409",
+		})
+	} else {
+		User.EMail = c.FormValue("email")
 	}
 	// passwordをArgon2idで暗号化
 	// 参考サイト(MIT License):https://www.alexedwards.net/blog/how-to-hash-and-verify-passwords-with-argon2-in-go
@@ -138,7 +139,7 @@ func (h *Handler) Register(c echo.Context) error {
 		keyLength:   32,
 	}
 
-	password, err := generatePassword(User.Password, p)
+	User.Password, err = generatePassword(c.FormValue("password"), p)
 	if err != nil {
 		return echo.ErrInternalServerError
 	}
@@ -151,7 +152,7 @@ func (h *Handler) Register(c echo.Context) error {
 		})
 	}
 
-	url := fmt.Sprintf("/users/%s/", userid)
+	url := fmt.Sprintf("/users/%s/", User.UserID)
 
 	return c.JSON(http.StatusCreated, echo.Map{
 		"status_code": "201",
@@ -241,39 +242,58 @@ func CheckRegexp(reg, str string) bool {
 	return regexp.MustCompile(reg).Match([]byte(str))
 }
 
-func CheckUniqueUserID(UserID string) (bool, error) {
+func (h *Handler) CheckUniqueUserID(UserID string) (bool, error) {
+	var IsUnique bool
+	db := h.DB
+
 	BindParams := map[string]interface{}{
 		"UserID": UserID,
 	}
 	Query, Params, err := sqlx.Named(
-		"SELECT user_id FROM users WHERE user_id = :UserID",
+		"SELECT user_id, CASE WHEN user_id=:UserID THEN 'false' ELSE 'true' FROM users;",
 		BindParams,
 	)
-	if err := db.QueryRowx(Query, Params); err == sql.ErrNoRows {
+	if err != nil {
+		return false, errors.New(fmt.Sprintf("Error CheckUniqueUserID(). Failed to set prepared statement: %s", err))
+	}
+
+	if err := db.QueryRowx(Query, Params); err != nil {
+		return false, errors.New(fmt.Sprintf("Error CheckUniqueUserID(). Failed to select user data: %s", err))
+	}
+	if IsUnique {
 		return true, nil
-	} else if err != nil {
+	} else {
 		return false, nil
 	}
 	return false, nil
 }
 
-func CheckUniqueEmail(EMail string) (bool, error) {
+func (h *Handler) CheckUniqueEmail(EMail string) (bool, error) {
+	var IsUnique bool
+	db := h.DB
 	BindParams := map[string]interface{}{
 		"EMail": EMail,
 	}
 	Query, Params, err := sqlx.Named(
-		"SELECT email FROM users WHERE email = :EMail",
+		"SELECT email, CASE WHEN email=:EMail THEN 'false' ELSE 'true' FROM users;",
 		BindParams,
 	)
-	if err := db.QueryRowx(Query, Params); err == sql.ErrNoRows {
+	if err != nil {
+		return false, errors.New(fmt.Sprintf("Error CheckUniqueEMail(). Failed to set prepared statement: %s", err))
+	}
+
+	if err := db.QueryRowx(Query, Params).Scan(&IsUnique); err != nil {
+		return false, errors.New(fmt.Sprintf("Error CheckUniqueEMail(). Failed to select user data: %s", err))
+	}
+	if IsUnique {
 		return true, nil
-	} else if err != nil {
+	} else {
 		return false, nil
 	}
 	return false, nil
 }
 
-func InsertUserData(User *User) error {
+func (h *Handler) InsertUserData(User *RegisterParams) error {
 	db := h.DB
 	BindParams := map[string]interface{}{
 		"UserID":     User.UserID,
@@ -286,7 +306,11 @@ func InsertUserData(User *User) error {
 		"INSERT INTO users (user_id, email, screen_name, created_at, updated_at, password) VALUES (:UserID, :EMail, :ScreenName, :Now, :Now, :Password)",
 		BindParams,
 	)
-	if err := db.Exec(Query, Params); err != nil {
+	if err != nil {
+		return errors.New(fmt.Sprintf("Error InsertUserData(). Failed to set prepared statement: %s", err))
+	}
+
+	if _, err := db.Exec(Query, Params); err != nil {
 		return errors.New(fmt.Sprintf("Error InsertUserData(). Failed to insert user data: %s", err))
 	}
 	return nil
