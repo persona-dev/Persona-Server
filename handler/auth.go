@@ -140,18 +140,11 @@ func (h *Handler) Register(c echo.Context) error {
 	}
 	// 指定されたデータをもとにINSERT
 
-	// err := InsertUserData() (error)
-	if _, err := db.Exec(
-		"INSERT INTO users (user_id, email, screen_name, created_at, updated_at, password) VALUES (?, ?, ?, ?, ?, ?)",
-		userid,
-		EMail,
-		c.FormValue("screen_name"),
-		time.Now(),
-		time.Now(),
-		password,
-	); err != nil {
+	if err := h.InsertUserData(User); err != nil {
 		log.Println(err)
-		return echo.ErrInternalServerError
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"status_code": "500",
+		})
 	}
 
 	url := fmt.Sprintf("/users/%s/", userid)
@@ -274,4 +267,23 @@ func CheckUniqueEmail(EMail string) (bool, error) {
 		return false, nil
 	}
 	return false, nil
+}
+
+func InsertUserData(User *User) error {
+	db := h.DB
+	BindParams := map[string]interface{}{
+		"UserID":     User.UserID,
+		"EMail":      User.EMail,
+		"ScreenName": User.ScreenName,
+		"Now":        time.Now(),
+		"Password":   User.Password,
+	}
+	Query, Params, err := sqlx.Named(
+		"INSERT INTO users (user_id, email, screen_name, created_at, updated_at, password) VALUES (:UserID, :EMail, :ScreenName, :Now, :Now, :Password)",
+		BindParams,
+	)
+	if err := db.Exec(Query, Params); err != nil {
+		return errors.New(fmt.Sprintf("Error InsertUserData(). Failed to insert user data: %s", err))
+	}
+	return nil
 }
