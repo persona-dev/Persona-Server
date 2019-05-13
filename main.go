@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/rsa"
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -64,7 +63,7 @@ func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
 	case "sqlite3":
 		db, err := sqlx.Open("sqlite3", "test.db")
 		if err != nil {
-			return nil, errors.New(fmt.Sprintf("failed to connect Database: %s", err))
+			return nil, fmt.Errorf("failed to connect Database: %s", err)
 		}
 
 		migrations := &migrate.FileMigrationSource{
@@ -73,7 +72,7 @@ func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
 		_, err = migrate.Exec(db.DB, "sqlite3", migrations, migrate.Up)
 		if err != nil {
 			log.Println(err)
-			return nil, errors.New(fmt.Sprintf("failed migrations: %s", err))
+			return nil, fmt.Errorf("failed migrations: %s", err)
 		} /* else {
 			log.Println("Applied %d migrations", n)
 		} */
@@ -81,7 +80,7 @@ func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
 	case "postgres":
 		db, err := sqlx.Open("postgres", os.Getenv("DATABASE_URL"))
 		if err != nil {
-			return nil, errors.New(fmt.Sprintf("failed to connect Database: %s", err))
+			return nil, fmt.Errorf("failed to connect Database: %s", err)
 		}
 
 		migrations := &migrate.FileMigrationSource{
@@ -89,13 +88,13 @@ func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
 		}
 		_, err = migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
 		if err != nil {
-			return nil, errors.New(fmt.Sprintf("failed migrations: %s", err))
+			return nil, fmt.Errorf("failed migrations: %s", err)
 		} /*else {
 				log.Println("Applied %d migrations", n)
 		} */
 		return db, nil
 	default:
-		return nil, errors.New("invaild database flag")
+		return nil, fmt.Errorf("invaild database flag")
 	}
 }
 

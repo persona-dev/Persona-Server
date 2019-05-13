@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -217,11 +216,11 @@ func (h *Handler) CheckUniqueUserID(UserID string) (bool, error) {
 		BindParams,
 	)
 	if err != nil {
-		return false, errors.New(fmt.Sprintf("Error CheckUniqueUserID(). Failed to set prepared statement: %s", err))
+		return false, fmt.Errorf("Error CheckUniqueUserID(). Failed to set prepared statement: %s", err)
 	}
 
-	if err := db.QueryRowx(Query, Params); err != nil {
-		return false, errors.New(fmt.Sprintf("Error CheckUniqueUserID(). Failed to select user data: %s", err))
+	if err := db.QueryRowx(Query, Params).Scan(&IsUnique); err != nil {
+		return false, fmt.Errorf("Error CheckUniqueUserID(). Failed to select user data: %s", err)
 	}
 	if IsUnique {
 		return true, nil
@@ -242,11 +241,11 @@ func (h *Handler) CheckUniqueEmail(EMail string) (bool, error) {
 		BindParams,
 	)
 	if err != nil {
-		return false, errors.New(fmt.Sprintf("Error CheckUniqueEMail(). Failed to set prepared statement: %s", err))
+		return false, fmt.Errorf("Error CheckUniqueEMail(). Failed to set prepared statement: %s", err)
 	}
 
 	if err := db.QueryRowx(Query, Params).Scan(&IsUnique); err != nil {
-		return false, errors.New(fmt.Sprintf("Error CheckUniqueEMail(). Failed to select user data: %s", err))
+		return false, fmt.Errorf("Error CheckUniqueEMail(). Failed to select user data: %s", err)
 	}
 	if IsUnique {
 		return true, nil
@@ -270,11 +269,11 @@ func (h *Handler) InsertUserData(User *RegisterParams) error {
 		BindParams,
 	)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error InsertUserData(). Failed to set prepared statement: %s", err))
+		return fmt.Errorf("Error InsertUserData(). Failed to set prepared statement: %s", err)
 	}
 
 	if _, err := db.Exec(Query, Params); err != nil {
-		return errors.New(fmt.Sprintf("Error InsertUserData(). Failed to insert user data: %s", err))
+		return fmt.Errorf("Error InsertUserData(). Failed to insert user data: %s", err)
 	}
 	return nil
 }
@@ -290,11 +289,11 @@ func (h *Handler) RoadPasswordAndUserID(RequestUserID string) (string, string, e
 		BindParams,
 	)
 	if err != nil {
-		return "", "", errors.New(fmt.Sprintf("Error RoadPasswordAndUserID(). Failed to set prepared statement: %s", err))
+		return "", "", fmt.Errorf("Error RoadPasswordAndUserID(). Failed to set prepared statement: %s", err)
 	}
 
 	if db.QueryRowx(Query, Params).Scan(&UserID, &Password); err != nil {
-		return "", "", errors.New(fmt.Sprintf("Error RoadPasswordAndUserID(). Failed to select user data: %s", err))
+		return "", "", fmt.Errorf("Error RoadPasswordAndUserID(). Failed to select user data: %s", err)
 	}
 	return UserID, Password, nil
 }
@@ -310,11 +309,11 @@ func (h *Handler) UpdateAt(RequestUserID string) error {
 		BindParams,
 	)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error UpdateAt(). Failed to set prepared statement: %s", err))
+		return fmt.Errorf("Error UpdateAt(). Failed to set prepared statement: %s", err)
 	}
 
 	if _, err := db.Exec(Query, Params); err != nil {
-		return errors.New(fmt.Sprintf("Error UpdateAt(). Failed to update user data: %s", err))
+		return fmt.Errorf("Error UpdateAt(). Failed to update user data: %s", err)
 	}
 	return nil
 }
@@ -322,7 +321,7 @@ func (h *Handler) UpdateAt(RequestUserID string) error {
 func LoadPrivateKey() ([]byte, error) {
 	PrivateKey, err := ioutil.ReadFile("private-key.pem")
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("failed to road private key: %s", err))
+		return nil, fmt.Errorf("failed to road private key: %s", err)
 	}
 	return PrivateKey, nil
 }
@@ -330,12 +329,12 @@ func LoadPrivateKey() ([]byte, error) {
 func GenerateJWTToken(UserID string) (string, error) {
 	PrivateKey, err := LoadPrivateKey()
 	if err != nil {
-		return "", error.New(fmt.Sprintf("LoadPrivateKey(): %s", err))
+		return "", fmt.Errorf("LoadPrivateKey(): %s", err)
 	}
 
 	Key, err := jwt.ParseRSAPrivateKeyFromPEM(PrivateKey)
 	if err != nil {
-		return "", errors.New("failed to parse Privatekey: %s", err)
+		return "", fmt.Errorf("failed to parse Privatekey: %s", err)
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS512,
@@ -348,7 +347,7 @@ func GenerateJWTToken(UserID string) (string, error) {
 	)
 	t, err := token.SignedString(Key)
 	if err != nil {
-		return "", errors.New("failed to sign string: %s", err)
+		return "", fmt.Errorf("failed to sign string: %s", err)
 	}
 	return t, nil
 }
