@@ -18,7 +18,7 @@ import (
 	"github.com/labstack/echo/middleware"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/rubenv/sql-migrate"
+	migrate "github.com/rubenv/sql-migrate"
 )
 
 func JWTAuthentication(next echo.HandlerFunc) echo.HandlerFunc {
