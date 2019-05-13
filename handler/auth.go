@@ -30,7 +30,7 @@ func (h *Handler) Login(c echo.Context) error {
 
 	UserID, Password, err := RoadPasswordAndUserID(c.FormValue("userid"))
 
-	match, err := comparePasswordAndHash(c.FormValue("password"), password)
+	match, err := comparePasswordAndHash(c.FormValue("password"), Password)
 	if err != nil {
 		log.Println(err)
 		return echo.ErrInternalServerError
