@@ -60,12 +60,10 @@ func (h *Handler) Register(c echo.Context) error {
 
 	User := new(RegisterParams)
 	User.ScreenName = c.FormValue("screen_name")
-	//TODO:英数字のみであるか検証する
+
 	if len := len(User.UserID); CheckRegexp(`[^a-zA-Z0-9_]+`, User.UserID) || len > 15 || len == 0 {
 		return echo.ErrBadRequest
 	}
-
-	//TODO:英字はすべて小文字に変換する
 
 	UserIDConflict, err := h.CheckUniqueUserID(strings.ToLower(c.FormValue("userid")))
 	if err != nil {
@@ -89,7 +87,6 @@ func (h *Handler) Register(c echo.Context) error {
 	}
 	User.EMail = c.FormValue("email")
 
-	// passwordをArgon2idで暗号化
 	// 参考サイト(MIT License):https://www.alexedwards.net/blog/how-to-hash-and-verify-passwords-with-argon2-in-go
 
 	var p = &Argon2Params{
@@ -104,7 +101,6 @@ func (h *Handler) Register(c echo.Context) error {
 	if err != nil {
 		return echo.ErrInternalServerError
 	}
-	// 指定されたデータをもとにINSERT
 
 	if err := h.InsertUserData(User); err != nil {
 		log.Println(err)
