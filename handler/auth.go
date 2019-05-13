@@ -41,8 +41,7 @@ func (h *Handler) Login(c echo.Context) error {
 		})
 	}
 
-	// updated_atの更新
-	if err := UpdatedAt(UserID); err != nil {
+	if err := h.UpdateAt(UserID); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"status_code": "500",
 		})
@@ -302,7 +301,8 @@ func (h *Handler) RoadPasswordAndUserID(RequestUserID string) (string, string, e
 	return UserID, Password, nil
 }
 
-func UpdateAt(UserID string) error {
+func (h *Handler) UpdateAt(RequestUserID string) error {
+	db := h.DB
 	BindParams := map[string]interface{}{
 		"UserID": RequestUserID,
 		"Now":    time.Now(),
