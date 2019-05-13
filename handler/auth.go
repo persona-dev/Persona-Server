@@ -75,9 +75,8 @@ func (h *Handler) Register(c echo.Context) error {
 		return c.JSON(http.StatusConflict, echo.Map{
 			"status_code": "409",
 		})
-	} else {
-		User.UserID = strings.ToLower(c.FormValue("userid"))
 	}
+	User.UserID = strings.ToLower(c.FormValue("userid"))
 
 	EMailConflict, err := h.CheckUniqueEmail(c.FormValue("email"))
 	if err != nil {
@@ -87,9 +86,9 @@ func (h *Handler) Register(c echo.Context) error {
 		return c.JSON(http.StatusConflict, echo.Map{
 			"status_code": "409",
 		})
-	} else {
-		User.EMail = c.FormValue("email")
 	}
+	User.EMail = c.FormValue("email")
+
 	// passwordをArgon2idで暗号化
 	// 参考サイト(MIT License):https://www.alexedwards.net/blog/how-to-hash-and-verify-passwords-with-argon2-in-go
 
@@ -224,8 +223,6 @@ func (h *Handler) CheckUniqueUserID(UserID string) (bool, error) {
 	}
 	if IsUnique {
 		return true, nil
-	} else {
-		return false, nil
 	}
 	return false, nil
 }
@@ -249,8 +246,6 @@ func (h *Handler) CheckUniqueEmail(EMail string) (bool, error) {
 	}
 	if IsUnique {
 		return true, nil
-	} else {
-		return false, nil
 	}
 	return false, nil
 }
