@@ -26,18 +26,9 @@ func (h *Handler) Login(c echo.Context) error {
 		return echo.ErrBadRequest
 	}
 
-	var password, UserID string
 	db := h.DB
 
-	if err := db.QueryRow(
-		"SELECT password, user_id FROM users WHERE user_id = ? OR email = ?",
-		c.FormValue("userid"),
-		c.FormValue("userid"),
-	).Scan(&password, &UserID); err != nil {
-		log.Println(err)
-		return echo.ErrBadRequest
-	}
-	// 送信されてきたpasswordの検証
+	UserID, Password, err := RoadPasswordAndUserID(c.FormValue("userid"))
 
 	match, err := comparePasswordAndHash(c.FormValue("password"), password)
 	if err != nil {
@@ -314,4 +305,24 @@ func (h *Handler) InsertUserData(User *RegisterParams) error {
 		return errors.New(fmt.Sprintf("Error InsertUserData(). Failed to insert user data: %s", err))
 	}
 	return nil
+}
+
+func (h *Handler) RoadPasswordAndUserID(RequestUserID string) (string, string, error) {
+	var UserID, Password string
+	db := h.DB
+	BindParams := map[string]interface{}{
+		"UserID": RequestUserID,
+	}
+	Query, Params, err := sqlx.Named(
+		"SELECT password, user_id FROM users WHERE user_id = :UserID OR email = :UserID",
+		BindParams,
+	)
+	if err != nil {
+		return "", "", errors.New(fmt.Sprintf("Error RoadPasswordAndUserID(). Failed to set prepared statement: %s", err))
+	}
+
+	if db.QueryRowx(Query, Params).Scan(&UserID, &Password); err != nil {
+		return "", "", errors.New(fmt.Sprintf("Error RoadPasswordAndUserID(). Failed to select user data: %s", err))
+	}
+	return UserID, Password, nil
 }
