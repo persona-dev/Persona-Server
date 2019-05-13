@@ -42,40 +42,21 @@ func (h *Handler) Login(c echo.Context) error {
 	}
 
 	// updated_atの更新
-	// jwtの発行
-
-	privateKey, err := ioutil.ReadFile("private-key.pem")
-	if err != nil {
-		log.Println("failed to road private key.", err)
-		return echo.ErrInternalServerError
 	if err := UpdatedAt(UserID); err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"status_code": "500",
 		})
 	}
 
-	Key, err := jwt.ParseRSAPrivateKeyFromPEM(privateKey)
+	Token, err := GenerateJWTToken(UserID)
 	if err != nil {
-		log.Println(err)
-		return echo.ErrInternalServerError
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodRS512,
-		&jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Minute * 5).Unix(),
-			IssuedAt:  time.Now().Unix(),
-			NotBefore: time.Now().Add(time.Second * 5).Unix(),
-			Audience:  UserID,
-		},
-	)
-	t, err := token.SignedString(Key)
-	if err != nil {
-		log.Println(err)
-		return echo.ErrInternalServerError
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"status_code": "500",
+		})
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"token": t,
+		"token": token,
 	})
 }
 
@@ -338,4 +319,38 @@ func UpdateAt(UserID string) error {
 		return errors.New(fmt.Sprintf("Error UpdateAt(). Failed to update user data: %s", err))
 	}
 	return nil
+}
+
+func LoadPrivateKey() ([]byte, error) {
+	PrivateKey, err := ioutil.ReadFile("private-key.pem")
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("failed to road private key: %s", err))
+	}
+	return PrivateKey, nil
+}
+
+func GenerateJWTToken(UserID string) (string, error) {
+	PrivateKey, err := LoadPrivateKey()
+	if err != nil {
+		return "", error.New(fmt.Sprintf("LoadPrivateKey(): %s", err))
+	}
+
+	Key, err := jwt.ParseRSAPrivateKeyFromPEM(PrivateKey)
+	if err != nil {
+		return "", errors.New("failed to parse Privatekey: %s", err)
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS512,
+		&jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Minute * 5).Unix(),
+			IssuedAt:  time.Now().Unix(),
+			NotBefore: time.Now().Add(time.Second * 5).Unix(),
+			Audience:  UserID,
+		},
+	)
+	t, err := token.SignedString(Key)
+	if err != nil {
+		return "", errors.New("failed to sign string: %s", err)
+	}
+	return t, nil
 }
