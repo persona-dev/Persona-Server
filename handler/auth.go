@@ -26,7 +26,7 @@ func (h *Handler) Login(c echo.Context) error {
 		return echo.ErrBadRequest
 	}
 
-	UserID, Password, err := RoadPasswordAndUserID(c.FormValue("userid"))
+	UserID, Password, err := h.RoadPasswordAndUserID(c.FormValue("userid"))
 
 	match, err := comparePasswordAndHash(c.FormValue("password"), Password)
 	if err != nil {
