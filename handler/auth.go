@@ -42,22 +42,16 @@ func (h *Handler) Login(c echo.Context) error {
 	}
 
 	// updated_atの更新
-
-	if _, err := db.Exec(
-		"UPDATE users SET updated_at = ? WHERE user_id = ?",
-		time.Now(),
-		UserID,
-	); err != nil {
-		log.Println(err)
-		return echo.ErrInternalServerError
-	}
-
 	// jwtの発行
 
 	privateKey, err := ioutil.ReadFile("private-key.pem")
 	if err != nil {
 		log.Println("failed to road private key.", err)
 		return echo.ErrInternalServerError
+	if err := UpdatedAt(UserID); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"status_code": "500",
+		})
 	}
 
 	Key, err := jwt.ParseRSAPrivateKeyFromPEM(privateKey)
@@ -325,4 +319,23 @@ func (h *Handler) RoadPasswordAndUserID(RequestUserID string) (string, string, e
 		return "", "", errors.New(fmt.Sprintf("Error RoadPasswordAndUserID(). Failed to select user data: %s", err))
 	}
 	return UserID, Password, nil
+}
+
+func UpdateAt(UserID string) error {
+	BindParams := map[string]interface{}{
+		"UserID": RequestUserID,
+		"Now":    time.Now(),
+	}
+	Query, Params, err := sqlx.Named(
+		"UPDATE users SET updated_at = :Now WHERE user_id = :UserID",
+		BindParams,
+	)
+	if err != nil {
+		return errors.New(fmt.Sprintf("Error UpdateAt(). Failed to set prepared statement: %s", err))
+	}
+
+	if _, err := db.Exec(Query, Params); err != nil {
+		return errors.New(fmt.Sprintf("Error UpdateAt(). Failed to update user data: %s", err))
+	}
+	return nil
 }
