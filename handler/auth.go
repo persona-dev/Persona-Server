@@ -2,6 +2,7 @@ package handler
 
 import (
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/subtle"
 	"database/sql"
 	"encoding/base64"
@@ -314,10 +315,14 @@ func (h *Handler) UpdateAt(RequestUserID string) error {
 	return nil
 }
 
-func LoadPrivateKey() ([]byte, error) {
-	PrivateKey, err := ioutil.ReadFile("private-key.pem")
+func LoadPrivateKey() (*rsa.PrivateKey, error) {
+	Key, err := ioutil.ReadFile("private-key.pem")
 	if err != nil {
 		return nil, fmt.Errorf("failed to road private key: %s", err)
+	}
+	PrivateKey, err := jwt.ParseRSAPrivateKeyFromPEM(Key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse Privatekey: %s", err)
 	}
 	return PrivateKey, nil
 }
@@ -328,11 +333,6 @@ func GenerateJWTToken(UserID string) (string, error) {
 		return "", fmt.Errorf("LoadPrivateKey(): %s", err)
 	}
 
-	Key, err := jwt.ParseRSAPrivateKeyFromPEM(PrivateKey)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse Privatekey: %s", err)
-	}
-
 	token := jwt.NewWithClaims(jwt.SigningMethodRS512,
 		&jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Minute * 5).Unix(),
@@ -341,7 +341,7 @@ func GenerateJWTToken(UserID string) (string, error) {
 			Audience:  UserID,
 		},
 	)
-	t, err := token.SignedString(Key)
+	t, err := token.SignedString(PrivateKey)
 	if err != nil {
 		return "", fmt.Errorf("failed to sign string: %s", err)
 	}
