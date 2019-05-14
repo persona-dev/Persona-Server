@@ -208,7 +208,7 @@ func CheckRegexp(reg, str string) bool {
 }
 
 func (h *Handler) CheckUniqueUserID(UserID string) (bool, error) {
-	var IsUnique sql.NullString
+	var IsUnique sql.NullInt64
 	db := h.DB
 
 	BindParams := map[string]interface{}{
@@ -227,14 +227,15 @@ func (h *Handler) CheckUniqueUserID(UserID string) (bool, error) {
 	if err := db.Get(&IsUnique, Rebind, Params...); err != nil {
 		return false, fmt.Errorf("Error CheckUniqueUserID(). Failed to select user data: %s", err)
 	}
-	if IsUnique.String == "0" {
+
+	if IsUnique.Int64 == 0 {
 		return true, nil
 	}
 	return false, nil
 }
 
 func (h *Handler) CheckUniqueEmail(EMail string) (bool, error) {
-	var IsUnique sql.NullString
+	var IsUnique sql.NullInt64
 	db := h.DB
 	BindParams := map[string]interface{}{
 		"EMail": EMail,
@@ -252,7 +253,7 @@ func (h *Handler) CheckUniqueEmail(EMail string) (bool, error) {
 		return false, fmt.Errorf("Error CheckUniqueEMail(). Failed to select user data: %s", err)
 	}
 
-	if IsUnique.String == "0" {
+	if IsUnique.Int64 == 0 {
 		return true, nil
 	}
 	return false, nil
@@ -275,7 +276,9 @@ func (h *Handler) InsertUserData(User *RegisterParams) error {
 		return fmt.Errorf("Error InsertUserData(). Failed to set prepared statement: %s", err)
 	}
 
-	if _, err := db.Exec(Query, Params); err != nil {
+	Rebind := db.Rebind(Query)
+
+	if _, err := db.Exec(Rebind, Params...); err != nil {
 		return fmt.Errorf("Error InsertUserData(). Failed to insert user data: %s", err)
 	}
 	return nil
@@ -288,14 +291,16 @@ func (h *Handler) RoadPasswordAndUserID(RequestUserID string) (string, string, e
 		"UserID": RequestUserID,
 	}
 	Query, Params, err := sqlx.Named(
-		"SELECT password, user_id FROM users WHERE user_id = :UserID OR email = :UserID",
+		"SELECT user_id, password FROM users WHERE user_id = :UserID OR email = :UserID",
 		BindParams,
 	)
 	if err != nil {
 		return "", "", fmt.Errorf("Error RoadPasswordAndUserID(). Failed to set prepared statement: %s", err)
 	}
 
-	if db.QueryRowx(Query, Params).Scan(&UserID, &Password); err != nil {
+	Rebind := db.Rebind(Query)
+
+	if db.QueryRowx(Rebind, Params...).Scan(&UserID, &Password); err != nil {
 		return "", "", fmt.Errorf("Error RoadPasswordAndUserID(). Failed to select user data: %s", err)
 	}
 	return UserID, Password, nil
@@ -315,7 +320,9 @@ func (h *Handler) UpdateAt(RequestUserID string) error {
 		return fmt.Errorf("Error UpdateAt(). Failed to set prepared statement: %s", err)
 	}
 
-	if _, err := db.Exec(Query, Params); err != nil {
+	Rebind := db.Rebind(Query)
+
+	if _, err := db.Exec(Rebind, Params...); err != nil {
 		return fmt.Errorf("Error UpdateAt(). Failed to update user data: %s", err)
 	}
 	return nil
