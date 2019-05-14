@@ -26,7 +26,7 @@ func (h *Handler) CreatePosts(c echo.Context) error {
 		return echo.ErrInternalServerError
 	}
 
-	now := time.Now()
+	now := time.Now().Format(time.RFC3339Nano)
 	ulid := ulid.MustNew(ulid.Now(), rand.Reader)
 
 	db := h.DB

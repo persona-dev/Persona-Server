@@ -265,7 +265,7 @@ func (h *Handler) InsertUserData(User *RegisterParams) error {
 		"UserID":     User.UserID,
 		"EMail":      User.EMail,
 		"ScreenName": User.ScreenName,
-		"Now":        time.Now(),
+		"Now":        time.Now().Format(time.RFC3339Nano),
 		"Password":   User.Password,
 	}
 	Query, Params, err := sqlx.Named(
@@ -310,7 +310,7 @@ func (h *Handler) UpdateAt(RequestUserID string) error {
 	db := h.DB
 	BindParams := map[string]interface{}{
 		"UserID": RequestUserID,
-		"Now":    time.Now(),
+		"Now":    time.Now().Format(time.RFC3339Nano),
 	}
 	Query, Params, err := sqlx.Named(
 		"UPDATE users SET updated_at = :Now WHERE user_id = :UserID",
