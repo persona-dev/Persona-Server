@@ -2,7 +2,6 @@ package handler
 
 import (
 	"crypto/rand"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -17,10 +16,10 @@ func (h *Handler) CreatePosts(c echo.Context) error {
 	user := c.Get("token").(*jwt.Token)
 	claims := user.Claims.(jwt.MapClaims)
 	userID := claims["aud"]
-	fmt.Println(userID)
+	//fmt.Println(userID)
 
 	body := c.FormValue("body")
-	fmt.Println(body)
+	//fmt.Println(body)
 	if body == "" {
 		log.Println("No body.")
 		return echo.ErrInternalServerError
