@@ -70,6 +70,9 @@ func (h *Handler) Register(c echo.Context) error {
 	UserIDConflict, err := h.CheckUniqueUserID(strings.ToLower(c.FormValue("userid")))
 	if err != nil {
 		log.Println(err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"status_code": "500",
+		})
 	}
 	if !UserIDConflict {
 		return c.JSON(http.StatusConflict, echo.Map{
@@ -81,6 +84,9 @@ func (h *Handler) Register(c echo.Context) error {
 	EMailConflict, err := h.CheckUniqueEmail(c.FormValue("email"))
 	if err != nil {
 		log.Println(err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"status_code": "500",
+		})
 	}
 	if !EMailConflict {
 		return c.JSON(http.StatusConflict, echo.Map{
