@@ -63,7 +63,7 @@ func (h *Handler) Register(c echo.Context) error {
 	User := new(RegisterParams)
 	User.ScreenName = c.FormValue("screen_name")
 
-	if len := len(User.UserID); CheckRegexp(`[^a-zA-Z0-9_]+`, User.UserID) || len > 15 || len == 0 {
+	if len := len(c.FormValue("userid")); CheckRegexp(`[^a-zA-Z0-9_]+`, c.FormValue("userid")) || len > 15 || len == 0 {
 		return echo.ErrBadRequest
 	}
 
