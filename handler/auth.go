@@ -3,6 +3,7 @@ package handler
 import (
 	"crypto/rand"
 	"crypto/subtle"
+	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -200,47 +201,51 @@ func CheckRegexp(reg, str string) bool {
 }
 
 func (h *Handler) CheckUniqueUserID(UserID string) (bool, error) {
-	var IsUnique bool
+	var IsUnique sql.NullString
 	db := h.DB
 
 	BindParams := map[string]interface{}{
 		"UserID": UserID,
 	}
+
 	Query, Params, err := sqlx.Named(
-		"SELECT user_id, CASE WHEN user_id=:UserID THEN 'false' ELSE 'true' FROM users;",
+		`SELECT SUM(CASE WHEN user_id = :UserID THEN 1 ELSE 0 END) AS userid_count FROM users;`,
 		BindParams,
 	)
 	if err != nil {
 		return false, fmt.Errorf("Error CheckUniqueUserID(). Failed to set prepared statement: %s", err)
 	}
+	Rebind := db.Rebind(Query)
 
-	if err := db.QueryRowx(Query, Params).Scan(&IsUnique); err != nil {
+	if err := db.Get(&IsUnique, Rebind, Params...); err != nil {
 		return false, fmt.Errorf("Error CheckUniqueUserID(). Failed to select user data: %s", err)
 	}
-	if IsUnique {
+	if IsUnique.String == "0" {
 		return true, nil
 	}
 	return false, nil
 }
 
 func (h *Handler) CheckUniqueEmail(EMail string) (bool, error) {
-	var IsUnique bool
+	var IsUnique sql.NullString
 	db := h.DB
 	BindParams := map[string]interface{}{
 		"EMail": EMail,
 	}
 	Query, Params, err := sqlx.Named(
-		"SELECT email, CASE WHEN email=:EMail THEN 'false' ELSE 'true' FROM users;",
+		`SELECT SUM(CASE WHEN user_id = :EMail THEN 1 ELSE 0 END) AS userid_count FROM users;`,
 		BindParams,
 	)
 	if err != nil {
 		return false, fmt.Errorf("Error CheckUniqueEMail(). Failed to set prepared statement: %s", err)
 	}
+	Rebind := db.Rebind(Query)
 
-	if err := db.QueryRowx(Query, Params).Scan(&IsUnique); err != nil {
+	if err := db.Get(&IsUnique, Rebind, Params...); err != nil {
 		return false, fmt.Errorf("Error CheckUniqueEMail(). Failed to select user data: %s", err)
 	}
-	if IsUnique {
+
+	if IsUnique.String == "0" {
 		return true, nil
 	}
 	return false, nil
