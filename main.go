@@ -2,7 +2,7 @@ package main
 
 import (
 	"crypto/rsa"
-	"database/sql"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -13,10 +13,12 @@ import (
 	"github.com/eniehack/simple-sns-go/handler"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
+	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/rubenv/sql-migrate"
+	migrate "github.com/rubenv/sql-migrate"
 )
 
 func JWTAuthentication(next echo.HandlerFunc) echo.HandlerFunc {
@@ -56,7 +58,49 @@ func LookupPublicKey() (*rsa.PublicKey, error) {
 	return ParsedKey, err
 }
 
+func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
+	switch DataBaseName {
+	case "sqlite3":
+		db, err := sqlx.Open("sqlite3", "test.db")
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect Database: %s", err)
+		}
+
+		migrations := &migrate.FileMigrationSource{
+			Dir: "migrations/sqlite3",
+		}
+		_, err = migrate.Exec(db.DB, "sqlite3", migrations, migrate.Up)
+		if err != nil {
+			log.Println(err)
+			return nil, fmt.Errorf("failed migrations: %s", err)
+		} /* else {
+			log.Println("Applied %d migrations", n)
+		} */
+		return db, nil
+	case "postgres":
+		db, err := sqlx.Open("postgres", os.Getenv("DATABASE_URL"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect Database: %s", err)
+		}
+
+		migrations := &migrate.FileMigrationSource{
+			Dir: "migrations/postgres",
+		}
+		_, err = migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
+		if err != nil {
+			return nil, fmt.Errorf("failed migrations: %s", err)
+		} /*else {
+				log.Println("Applied %d migrations", n)
+		} */
+		return db, nil
+	default:
+		return nil, fmt.Errorf("invaild database flag")
+	}
+}
+
 func main() {
+	var DataBaseName string
+
 	e := echo.New()
 
 	e.Use(middleware.Logger())
@@ -68,22 +112,16 @@ func main() {
 		ExposeHeaders: []string{"Authorization"},
 	}))
 
-	db, err := sql.Open("sqlite3", "test.db")
+	flag.StringVar(&DataBaseName, "database", "sqlite3", "Database name. sqlite3 or postgres.")
+	flag.Parse()
+
+	db, err := SetUpDataBase(DataBaseName)
 	if err != nil {
-		e.Logger.Fatal("db connection", err)
+		e.Logger.Fatal(err)
 	}
+
 	db.SetConnMaxLifetime(1)
 	defer db.Close()
-
-	migrations := &migrate.FileMigrationSource{
-		Dir: "migrations/sqlite3",
-	}
-	n, err := migrate.Exec(db, "sqlite3", migrations, migrate.Up)
-	if err != nil {
-		log.Println(err)
-	} else {
-		log.Println("Applied %d migrations", n)
-	}
 
 	h := &handler.Handler{DB: db}
 

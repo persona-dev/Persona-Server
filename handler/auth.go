@@ -2,7 +2,9 @@ package handler
 
 import (
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/subtle"
+	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -15,6 +17,7 @@ import (
 	"golang.org/x/crypto/argon2"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo"
 )
 
@@ -24,20 +27,9 @@ func (h *Handler) Login(c echo.Context) error {
 		return echo.ErrBadRequest
 	}
 
-	var password, UserID string
-	db := h.DB
+	UserID, Password, err := h.RoadPasswordAndUserID(c.FormValue("userid"))
 
-	if err := db.QueryRow(
-		"SELECT password, user_id FROM users WHERE user_id = ? OR email = ?",
-		c.FormValue("userid"),
-		c.FormValue("userid"),
-	).Scan(&password, &UserID); err != nil {
-		log.Println(err)
-		return echo.ErrBadRequest
-	}
-	// 送信されてきたpasswordの検証
-
-	match, err := comparePasswordAndHash(c.FormValue("password"), password)
+	match, err := comparePasswordAndHash(c.FormValue("password"), Password)
 	if err != nil {
 		log.Println(err)
 		return echo.ErrInternalServerError
@@ -48,83 +40,61 @@ func (h *Handler) Login(c echo.Context) error {
 		})
 	}
 
-	// updated_atの更新
-
-	if _, err := db.Exec(
-		"UPDATE users SET updated_at = ? WHERE user_id = ?",
-		time.Now(),
-		UserID,
-	); err != nil {
-		log.Println(err)
-		return echo.ErrInternalServerError
+	if err := h.UpdateAt(UserID); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"status_code": "500",
+		})
 	}
 
-	// jwtの発行
-
-	privateKey, err := ioutil.ReadFile("private-key.pem")
+	Token, err := GenerateJWTToken(UserID)
 	if err != nil {
-		log.Println("failed to road private key.", err)
-		return echo.ErrInternalServerError
-	}
-
-	Key, err := jwt.ParseRSAPrivateKeyFromPEM(privateKey)
-	if err != nil {
-		log.Println(err)
-		return echo.ErrInternalServerError
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodRS512,
-		&jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Minute * 5).Unix(),
-			IssuedAt:  time.Now().Unix(),
-			NotBefore: time.Now().Add(time.Second * 5).Unix(),
-			Audience:  UserID,
-		},
-	)
-	t, err := token.SignedString(Key)
-	if err != nil {
-		log.Println(err)
-		return echo.ErrInternalServerError
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"status_code": "500",
+		})
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"token": t,
+		"token": Token,
 	})
 }
 
 func (h *Handler) Register(c echo.Context) error {
 
-	userid := strings.ToLower(c.FormValue("userid"))
-	EMail := c.FormValue("email")
+	User := new(RegisterParams)
+	User.ScreenName = c.FormValue("screen_name")
 
-	//TODO:英数字のみであるか検証する
-	if len := len(userid); CheckRegexp(`[^a-zA-Z0-9_]+`, userid) || len > 15 || len == 0 {
+	if len := len(c.FormValue("userid")); CheckRegexp(`[^a-zA-Z0-9_]+`, c.FormValue("userid")) || len > 15 || len == 0 {
 		return echo.ErrBadRequest
 	}
 
-	//TODO:英字はすべて小文字に変換する
-
-	db := h.DB
-
-	if err := db.QueryRow(
-		"SELECT user_id FROM users WHERE user_id = ?",
-		userid,
-	); err == nil {
+	UserIDConflict, err := h.CheckUniqueUserID(strings.ToLower(c.FormValue("userid")))
+	if err != nil {
+		log.Println(err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"status_code": "500",
+		})
+	}
+	if !UserIDConflict {
 		return c.JSON(http.StatusConflict, echo.Map{
 			"status_code": "409",
 		})
 	}
+	User.UserID = strings.ToLower(c.FormValue("userid"))
 
-	if err := db.QueryRow(
-		"SELECT email FROM users WHERE email = ?",
-		EMail,
-	); err == nil {
+	EMailConflict, err := h.CheckUniqueEmail(c.FormValue("email"))
+	if err != nil {
+		log.Println(err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"status_code": "500",
+		})
+	}
+	if !EMailConflict {
 		return c.JSON(http.StatusConflict, echo.Map{
 			"status_code": "409",
 		})
 	}
+	User.EMail = c.FormValue("email")
 
-	// passwordをArgon2idで暗号化
 	// 参考サイト(MIT License):https://www.alexedwards.net/blog/how-to-hash-and-verify-passwords-with-argon2-in-go
 
 	var p = &Argon2Params{
@@ -135,26 +105,19 @@ func (h *Handler) Register(c echo.Context) error {
 		keyLength:   32,
 	}
 
-	password, err := generatePassword(c.FormValue("password"), p)
+	User.Password, err = generatePassword(c.FormValue("password"), p)
 	if err != nil {
 		return echo.ErrInternalServerError
 	}
-	// 指定されたデータをもとにINSERT
 
-	if _, err := db.Exec(
-		"INSERT INTO users (user_id, email, screen_name, created_at, updated_at, password) VALUES (?, ?, ?, ?, ?, ?)",
-		userid,
-		EMail,
-		c.FormValue("screen_name"),
-		time.Now(),
-		time.Now(),
-		password,
-	); err != nil {
+	if err := h.InsertUserData(User); err != nil {
 		log.Println(err)
-		return echo.ErrInternalServerError
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"status_code": "500",
+		})
 	}
 
-	url := fmt.Sprintf("/users/%s/", userid)
+	url := fmt.Sprintf("/users/%s/", User.UserID)
 
 	return c.JSON(http.StatusCreated, echo.Map{
 		"status_code": "201",
@@ -242,4 +205,158 @@ func decodeHash(encodedHash string) (p *Argon2Params, salt, hash []byte, err err
 
 func CheckRegexp(reg, str string) bool {
 	return regexp.MustCompile(reg).Match([]byte(str))
+}
+
+func (h *Handler) CheckUniqueUserID(UserID string) (bool, error) {
+	var IsUnique sql.NullInt64
+	db := h.DB
+
+	BindParams := map[string]interface{}{
+		"UserID": UserID,
+	}
+
+	Query, Params, err := sqlx.Named(
+		`SELECT SUM(CASE WHEN user_id = :UserID THEN 1 ELSE 0 END) AS userid_count FROM users;`,
+		BindParams,
+	)
+	if err != nil {
+		return false, fmt.Errorf("Error CheckUniqueUserID(). Failed to set prepared statement: %s", err)
+	}
+	Rebind := db.Rebind(Query)
+
+	if err := db.Get(&IsUnique, Rebind, Params...); err != nil {
+		return false, fmt.Errorf("Error CheckUniqueUserID(). Failed to select user data: %s", err)
+	}
+
+	if IsUnique.Int64 == 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (h *Handler) CheckUniqueEmail(EMail string) (bool, error) {
+	var IsUnique sql.NullInt64
+	db := h.DB
+	BindParams := map[string]interface{}{
+		"EMail": EMail,
+	}
+	Query, Params, err := sqlx.Named(
+		`SELECT SUM(CASE WHEN user_id = :EMail THEN 1 ELSE 0 END) AS userid_count FROM users;`,
+		BindParams,
+	)
+	if err != nil {
+		return false, fmt.Errorf("Error CheckUniqueEMail(). Failed to set prepared statement: %s", err)
+	}
+	Rebind := db.Rebind(Query)
+
+	if err := db.Get(&IsUnique, Rebind, Params...); err != nil {
+		return false, fmt.Errorf("Error CheckUniqueEMail(). Failed to select user data: %s", err)
+	}
+
+	if IsUnique.Int64 == 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (h *Handler) InsertUserData(User *RegisterParams) error {
+	db := h.DB
+	BindParams := map[string]interface{}{
+		"UserID":     User.UserID,
+		"EMail":      User.EMail,
+		"ScreenName": User.ScreenName,
+		"Now":        time.Now().Format(time.RFC3339Nano),
+		"Password":   User.Password,
+	}
+	Query, Params, err := sqlx.Named(
+		"INSERT INTO users (user_id, email, screen_name, created_at, updated_at, password) VALUES (:UserID, :EMail, :ScreenName, :Now, :Now, :Password)",
+		BindParams,
+	)
+	if err != nil {
+		return fmt.Errorf("Error InsertUserData(). Failed to set prepared statement: %s", err)
+	}
+
+	Rebind := db.Rebind(Query)
+
+	if _, err := db.Exec(Rebind, Params...); err != nil {
+		return fmt.Errorf("Error InsertUserData(). Failed to insert user data: %s", err)
+	}
+	return nil
+}
+
+func (h *Handler) RoadPasswordAndUserID(RequestUserID string) (string, string, error) {
+	var UserID, Password string
+	db := h.DB
+	BindParams := map[string]interface{}{
+		"UserID": RequestUserID,
+	}
+	Query, Params, err := sqlx.Named(
+		"SELECT user_id, password FROM users WHERE user_id = :UserID OR email = :UserID",
+		BindParams,
+	)
+	if err != nil {
+		return "", "", fmt.Errorf("Error RoadPasswordAndUserID(). Failed to set prepared statement: %s", err)
+	}
+
+	Rebind := db.Rebind(Query)
+
+	if db.QueryRowx(Rebind, Params...).Scan(&UserID, &Password); err != nil {
+		return "", "", fmt.Errorf("Error RoadPasswordAndUserID(). Failed to select user data: %s", err)
+	}
+	return UserID, Password, nil
+}
+
+func (h *Handler) UpdateAt(RequestUserID string) error {
+	db := h.DB
+	BindParams := map[string]interface{}{
+		"UserID": RequestUserID,
+		"Now":    time.Now().Format(time.RFC3339Nano),
+	}
+	Query, Params, err := sqlx.Named(
+		"UPDATE users SET updated_at = :Now WHERE user_id = :UserID",
+		BindParams,
+	)
+	if err != nil {
+		return fmt.Errorf("Error UpdateAt(). Failed to set prepared statement: %s", err)
+	}
+
+	Rebind := db.Rebind(Query)
+
+	if _, err := db.Exec(Rebind, Params...); err != nil {
+		return fmt.Errorf("Error UpdateAt(). Failed to update user data: %s", err)
+	}
+	return nil
+}
+
+func LoadPrivateKey() (*rsa.PrivateKey, error) {
+	Key, err := ioutil.ReadFile("private-key.pem")
+	if err != nil {
+		return nil, fmt.Errorf("failed to road private key: %s", err)
+	}
+	PrivateKey, err := jwt.ParseRSAPrivateKeyFromPEM(Key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse Privatekey: %s", err)
+	}
+	return PrivateKey, nil
+}
+
+func GenerateJWTToken(UserID string) (string, error) {
+	PrivateKey, err := LoadPrivateKey()
+	if err != nil {
+		return "", fmt.Errorf("LoadPrivateKey(): %s", err)
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS512,
+		&jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Minute * 5).Unix(),
+			IssuedAt:  time.Now().Unix(),
+			NotBefore: time.Now().Add(time.Second * 5).Unix(),
+			Audience:  UserID,
+		},
+	)
+	t, err := token.SignedString(PrivateKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to sign string: %s", err)
+	}
+	return t, nil
 }
