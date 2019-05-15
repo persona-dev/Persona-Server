@@ -2,6 +2,7 @@ package handler
 
 import (
 	"crypto/rand"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -26,9 +27,21 @@ func (h *Handler) CreatePosts(c echo.Context) error {
 		return echo.ErrInternalServerError
 	}
 
-	ulid := ulid.MustNew(ulid.Now(), rand.Reader)
+	if err := h.InsertPost(Claims, Body); err != nil {
+		log.Println(err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"status_code": "500",
+		})
+	}
+
+	return c.NoContent(http.StatusOK)
+}
+
+func (h *Handler) InsertPost(Claims jwt.MapClaims, Body string) error {
 
 	db := h.DB
+	UserID := Claims["aud"]
+	ulid := ulid.MustNew(ulid.Now(), rand.Reader)
 
 	BindParams := map[string]interface{}{
 		"PostID": ulid.String(),
@@ -42,18 +55,14 @@ func (h *Handler) CreatePosts(c echo.Context) error {
 		BindParams,
 	)
 	if err != nil {
-		log.Println(err)
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"status_code": "500",
-		})
+		return fmt.Errorf("Error InsertPost(): failed to bind Parameters. %s", err)
 	}
 
 	Rebind := db.Rebind(Query)
 
 	if _, err := db.Exec(Rebind, Params...); err != nil {
-		log.Println("INSERT Err", err)
-		return echo.ErrInternalServerError
+		return fmt.Errorf("Error InsertPost(): failed to insert user data. %s", err)
 	}
 
-	return c.NoContent(http.StatusOK)
+	return nil
 }
