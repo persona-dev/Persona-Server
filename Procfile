@@ -1,0 +1,1 @@
+web: bin/simple-sns-go -database postgres
