@@ -14,14 +14,10 @@ import (
 )
 
 func (h *Handler) CreatePosts(c echo.Context) error {
-
-
 	User := c.Get("token").(*jwt.Token)
 	Claims := User.Claims.(jwt.MapClaims)
-	//fmt.Println(userID)
 
 	Body := c.FormValue("body")
-	//fmt.Println(body)
 	if Body == "" {
 		log.Println("No body.")
 		return echo.ErrInternalServerError
