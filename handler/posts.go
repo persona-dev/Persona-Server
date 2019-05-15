@@ -14,14 +14,14 @@ import (
 
 func (h *Handler) CreatePosts(c echo.Context) error {
 
-	user := c.Get("token").(*jwt.Token)
-	claims := user.Claims.(jwt.MapClaims)
-	userID := claims["aud"]
+
+	User := c.Get("token").(*jwt.Token)
+	Claims := User.Claims.(jwt.MapClaims)
 	//fmt.Println(userID)
 
-	body := c.FormValue("body")
+	Body := c.FormValue("body")
 	//fmt.Println(body)
-	if body == "" {
+	if Body == "" {
 		log.Println("No body.")
 		return echo.ErrInternalServerError
 	}
@@ -33,7 +33,7 @@ func (h *Handler) CreatePosts(c echo.Context) error {
 	BindParams := map[string]interface{}{
 		"PostID": ulid.String(),
 		"UserID": UserID,
-		"Body":   body,
+		"Body":   Body,
 		"Now":    time.Now().Format(time.RFC3339Nano),
 	}
 
