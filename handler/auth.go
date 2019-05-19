@@ -22,14 +22,19 @@ import (
 )
 
 func (h *Handler) Login(c echo.Context) error {
+	RequestData := new(LoginParams)
 
-	if c.FormValue("userid") == "" {
-		return echo.ErrBadRequest
+	if err := c.Bind(RequestData); err != nil {
+		return echo.ErrUnauthorized
 	}
 
-	UserID, Password, err := h.RoadPasswordAndUserID(c.FormValue("userid"))
+	if err := c.Validate(RequestData); err != nil {
+		return echo.ErrUnauthorized
+	}
 
-	match, err := comparePasswordAndHash(c.FormValue("password"), Password)
+	UserID, Password, err := h.RoadPasswordAndUserID(RequestData.UserName)
+
+	match, err := comparePasswordAndHash(RequestData.Password, Password)
 	if err != nil {
 		log.Println(err)
 		return echo.ErrInternalServerError
@@ -60,14 +65,23 @@ func (h *Handler) Login(c echo.Context) error {
 
 func (h *Handler) Register(c echo.Context) error {
 
+	RequestData := new(RegisterParams)
 	User := new(RegisterParams)
-	User.ScreenName = c.FormValue("screen_name")
 
-	if len := len(c.FormValue("userid")); CheckRegexp(`[^a-zA-Z0-9_]+`, c.FormValue("userid")) || len > 15 || len == 0 {
+	if err := c.Bind(RequestData); err != nil {
+		return echo.ErrBadRequest
+	}
+	if err := c.Validate(RequestData); err != nil {
 		return echo.ErrBadRequest
 	}
 
-	UserIDConflict, err := h.CheckUniqueUserID(strings.ToLower(c.FormValue("userid")))
+	/*
+		if len := len(c.FormValue("userid")); CheckRegexp(`[^a-zA-Z0-9_]+`, c.FormValue("userid")) || len > 15 || len == 0 {
+			return echo.ErrBadRequest
+		}
+	*/
+
+	UserIDConflict, err := h.CheckUniqueUserID(strings.ToLower(RequestData.UserID))
 	if err != nil {
 		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{
@@ -79,9 +93,9 @@ func (h *Handler) Register(c echo.Context) error {
 			"status_code": "409",
 		})
 	}
-	User.UserID = strings.ToLower(c.FormValue("userid"))
+	User.UserID = strings.ToLower(RequestData.UserID)
 
-	EMailConflict, err := h.CheckUniqueEmail(c.FormValue("email"))
+	EMailConflict, err := h.CheckUniqueEmail(RequestData.EMail)
 	if err != nil {
 		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{
@@ -93,7 +107,7 @@ func (h *Handler) Register(c echo.Context) error {
 			"status_code": "409",
 		})
 	}
-	User.EMail = c.FormValue("email")
+	User.EMail = RequestData.EMail
 
 	// 参考サイト(MIT License):https://www.alexedwards.net/blog/how-to-hash-and-verify-passwords-with-argon2-in-go
 
@@ -105,7 +119,7 @@ func (h *Handler) Register(c echo.Context) error {
 		keyLength:   32,
 	}
 
-	User.Password, err = generatePassword(c.FormValue("password"), p)
+	User.Password, err = generatePassword(RequestData.Password, p)
 	if err != nil {
 		return echo.ErrInternalServerError
 	}

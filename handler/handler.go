@@ -18,10 +18,14 @@ type (
 		keyLength   uint32
 	}
 	RegisterParams struct {
-		UserID     string
-		EMail      string
-		ScreenName string
-		Password   string
+		UserID     string `json:"userid" validate:"required,max=15"`
+		EMail      string `json:"email" validate:"required,email"`
+		ScreenName string `json:"screen_name" validate:"required,max=50"`
+		Password   string `json:"password" validate:"required"`
+	}
+	LoginParams struct {
+		UserName string `json:"userid" validate:"required"`
+		Password string `json:"password" validate:"required"`
 	}
 )
 

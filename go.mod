@@ -4,10 +4,13 @@ go 1.12
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/go-playground/locales v0.12.1 // indirect
+	github.com/go-playground/universal-translator v0.16.0 // indirect
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/labstack/gommon v0.2.8 // indirect
+	github.com/leodido/go-urn v1.1.0 // indirect
 	github.com/lib/pq v1.1.1
 	github.com/mattn/go-colorable v0.1.1 // indirect
 	github.com/mattn/go-isatty v0.0.7 // indirect
@@ -22,5 +25,6 @@ require (
 	golang.org/x/sys v0.0.0-20190516110030-61b9204099cb // indirect
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/tools v0.0.0-20190517183331-d88f79806bbd // indirect
+	gopkg.in/go-playground/validator.v9 v9.28.0
 	gopkg.in/gorp.v1 v1.7.2 // indirect
 )

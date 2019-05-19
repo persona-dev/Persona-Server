@@ -19,8 +19,22 @@ import (
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 	migrate "github.com/rubenv/sql-migrate"
+	"gopkg.in/go-playground/validator.v9"
 )
 
+type CustomValidator struct {
+	validator *validator.Validate
+}
+
+func (cv *CustomValidator) Validate(i interface{}) error {
+	return cv.validator.Struct(i)
+}
+
+/*
+func NewValidator() echo.Validator {
+	return &CustomValidator{validator: validator.New()}
+}
+*/
 func JWTAuthentication(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		AuthorizationHeader := c.Request().Header.Get("Authorization")
@@ -111,6 +125,7 @@ func main() {
 		MaxAge:        3600,
 		ExposeHeaders: []string{"Authorization"},
 	}))
+	e.Validator = &CustomValidator{validator: validator.New()}
 
 	flag.StringVar(&DataBaseName, "database", "sqlite3", "Database name. sqlite3 or postgres.")
 	flag.Parse()
