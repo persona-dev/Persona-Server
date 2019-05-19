@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -26,15 +27,16 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 	return cv.validator.Struct(i)
 }
 
-/*
 func TestMain(m *testing.M) {
-	h, err := SetUpDataBase()
-	db := h.DB
+	//h, err := SetUpDataBase()
+	//db := h.DB
 	ExitCode := m.Run()
-	db.Close()
+	//db.Close()
+	if err := os.Remove("test.db"); err != nil {
+		fmt.Println(err)
+	}
 	os.Exit(ExitCode)
 }
-*/
 
 func SetUpDataBase() (*Handler, error) {
 	db, err := sqlx.Open("sqlite3", "test.db")
