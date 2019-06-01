@@ -1,60 +1,65 @@
 package design
 
 import (
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
+	. "goa.design/goa/v3/dsl"
 )
 
 var JWT = JWTSecurity("JWT", func() {
-	TokenURL("/auth/signature")
-	Header("Authorization")
 	Scope("api:access", "API access")
 	Scope("api:admin", "管理者によるアクセス権限")
 })
 
-var _ = Resource("Authorization", func() {
-	BasePath("/auth")
-	Action("login", func() {
-		Description("ログイン")
-		Routing(
-			POST("/signature"),
-		)
-		Payload(LoginPayload, func() {
-			Required("userid", "password")
-		})
-		Response(OK, LoginMedia)
-		Response(Unauthorized)
-		UseTrait("error")
+var _ = Service("Authorization", func() {
+	HTTP(func() {
+		Path("/api/v1/auth")
 	})
-	Action("register", func() {
-		Description("新規登録")
-		Routing(
-			POST("/new"),
-		)
-		Payload(NewAccountPayload, func() {
-			Required("userid", "screen_name", "password")
+	Method("login", func() {
+		Description("ログイン")
+		Payload(LoginPayload)
+		HTTP(func() {
+			POST("/signature")
+			Response(StatusOK)
 		})
-		Response(Created, "/users/[0-9a-z]+")
-		Response(Conflict, ErrorMedia)
-		UseTrait("error")
+		/*
+			Response(Unauthorized)
+			UseTrait("error")
+		*/
+	})
+	Method("register", func() {
+		Description("新規登録")
+		Payload(NewAccountPayload)
+		HTTP(func() {
+			POST("/new")
+			Response(StatusCreated)
+		})
+		/*
+			Response(Created, "/users/[0-9a-z]+")
+			Response(Conflict, ErrorMedia)
+			UseTrait("error")
+		*/
 	})
 })
 
-var _ = Resource("Post", func() {
-	BasePath("/posts")
+var _ = Service("Post", func() {
+	HTTP(func() {
+		Path("/api/v1/posts")
+	})
 	Security(JWT, func() {
 		Scope("api:access")
 	})
-	Action("create", func() {
+	Method("create", func() {
 		Description("新規投稿")
-		Routing(
-			POST("/new"),
-		)
-		Payload(NewPostPayload, func() {
-			Required("body")
+		Security(JWT, func() {
+			Scope("api:access")
 		})
-		Response(NoContent)
-		UseTrait("error")
+		Payload(NewPostPayload)
+		HTTP(func() {
+			POST("/new")
+			Response(StatusNoContent)
+		})
+		/*
+			UseTrait("error")
+		*/
 	})
 	/*Action("timeline", func(){
 		Description("タイムラインの更新")
@@ -64,31 +69,39 @@ var _ = Resource("Post", func() {
 		Response(OK)
 		Response()
 	})*/
-	Action("reference", func() {
+	Method("reference", func() {
 		Description("投稿の参照")
 		NoSecurity()
-		Routing(
-			GET("/:post_id"),
-		)
-		Params(func() {
-			Param("post_id", String, "投稿固有のID", func() {
-				Pattern("[0-9A-Z]{26}")
+		Payload(PostDetailsMedia)
+
+		HTTP(func() {
+			GET("/{post_id}")
+			Params(func() {
+				Param("post_id", String, "投稿固有のID", func() {
+					Pattern("[0-9A-Z]{26}")
+				})
+				Required("post_id")
 			})
+			Response(StatusOK)
 		})
-		Response(OK, PostDetailsMedia)
-		UseTrait("error")
+		//PostDetailsMedia)
+		//UseTrait("error")
 	})
-	Action("delete", func() {
+	Method("delete", func() {
 		Description("投稿の削除")
-		Routing(
-			DELETE("/:post_id"),
-		)
-		Params(func() {
-			Param("post_id", String, "投稿固有のID", func() {
-				Pattern("[0-9A-Z]{26}")
+		Payload(DeletePostPayload)
+		HTTP(func() {
+			DELETE("/{post_id}")
+			Params(func() {
+				Param("post_id", String, "投稿固有のID", func() {
+					Pattern("[0-9A-Z]{26}")
+				})
+				Required("post_id")
 			})
+			Response(StatusNoContent)
 		})
-		Response(NoContent)
-		UseTrait("error")
+		/*
+			UseTrait("error")
+		*/
 	})
 })

@@ -1,31 +1,30 @@
 package design
 
 import (
-	. "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
+	"os"
+
+	. "goa.design/goa/v3/dsl"
 )
 
-var _ = API("Simple-SNS", func() {
-	Title("Simple-SNS")
+var _ = API("Persona", func() {
+	Title("Persona")
 	Description("Layer構造を持つSNSのAPIです.")
-	Version("0.1")
-	Scheme("https")
-	Host("localhost:8080")
-	BasePath("/api/v1")
-	Consumes("application/json")
-	Produces("application/json")
-	Trait("error", func() {
-		Response(NotFound, ErrorMedia)
-		Response(BadRequest, ErrorMedia)
-		Response(InternalServerError, ErrorMedia)
+	HTTP(func() {
+		Consumes("application/json")
+		Produces("application/json")
 	})
-	ResponseTemplate(Created, func(pattern string) {
-		Description("リソースの作成が完了しました。")
-		Status(201)
-		Headers(func() {
-			Header("Location", func() {
-				Pattern(pattern)
+	Server("persona", func() {
+		Services("Authorization", "Post")
+		Host("development", func() {
+			URI("http://localhost:8000/api/v1")
+		})
+
+		Host("production", func() {
+			URI("https://localhost:{port}/api/v1")
+			Variable("port", String, "Port number", func() {
+				Default(os.Getenv("PORT"))
 			})
 		})
 	})
+	Version("0.1.0")
 })

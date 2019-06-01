@@ -1,0 +1,247 @@
+swagger: "2.0"
+info:
+  title: Persona
+  description: Layer構造を持つSNSのAPIです.
+  version: 0.1.0
+host: localhost:8000
+consumes:
+- application/json
+produces:
+- application/json
+paths:
+  /api/v1/auth/new:
+    post:
+      tags:
+      - Authorization
+      summary: register Authorization
+      description: 新規登録
+      operationId: Authorization#register
+      parameters:
+      - name: RegisterRequestBody
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/AuthorizationRegisterRequestBody'
+          required:
+          - userid
+          - screen_name
+          - password
+      responses:
+        "201":
+          description: Created response.
+      schemes:
+      - http
+  /api/v1/auth/signature:
+    post:
+      tags:
+      - Authorization
+      summary: login Authorization
+      description: ログイン
+      operationId: Authorization#login
+      parameters:
+      - name: LoginRequestBody
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/AuthorizationLoginRequestBody'
+          required:
+          - userid
+          - password
+      responses:
+        "200":
+          description: OK response.
+      schemes:
+      - http
+  /api/v1/posts/{post_id}:
+    get:
+      tags:
+      - Post
+      summary: reference Post
+      description: 投稿の参照
+      operationId: Post#reference
+      parameters:
+      - name: post_id
+        in: path
+        description: 投稿固有のID
+        required: true
+        type: string
+        pattern: '[0-9A-Z]{26}'
+      - name: ReferenceRequestBody
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/PostReferenceRequestBody'
+          required:
+          - posted_at
+          - user_id
+          - screen_name
+          - body
+      responses:
+        "200":
+          description: OK response.
+      schemes:
+      - http
+    delete:
+      tags:
+      - Post
+      summary: delete Post
+      description: |-
+        投稿の削除
+
+        **Required security scopes for JWT**:
+          * `api:access`
+      operationId: Post#delete
+      parameters:
+      - name: post_id
+        in: path
+        description: 投稿固有のID
+        required: true
+        type: string
+        pattern: '[0-9A-Z]{26}'
+      - name: Authorization
+        in: header
+        description: JWT Token.
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content response.
+      schemes:
+      - http
+      security:
+      - JWT_header_Authorization: []
+  /api/v1/posts/new:
+    post:
+      tags:
+      - Post
+      summary: create Post
+      description: |-
+        新規投稿
+
+        **Required security scopes for JWT**:
+          * `api:access`
+      operationId: Post#create
+      parameters:
+      - name: Authorization
+        in: header
+        description: JWT Token.
+        required: true
+        type: string
+      - name: CreateRequestBody
+        in: body
+        required: true
+        schema:
+          $ref: '#/definitions/PostCreateRequestBody'
+          required:
+          - body
+      responses:
+        "204":
+          description: No Content response.
+      schemes:
+      - http
+      security:
+      - JWT_header_Authorization: []
+definitions:
+  AuthorizationLoginRequestBody:
+    title: AuthorizationLoginRequestBody
+    type: object
+    properties:
+      password:
+        type: string
+        example: testpassword
+      userid:
+        type: string
+        description: User ID
+        example: hogehoge
+        pattern: '[^a-zA-Z0-9_]+'
+        minLength: 1
+        maxLength: 15
+    example:
+      password: testpassword
+      userid: hogehoge
+    required:
+    - userid
+    - password
+  AuthorizationRegisterRequestBody:
+    title: AuthorizationRegisterRequestBody
+    type: object
+    properties:
+      password:
+        type: string
+        description: password of the user.
+        example: testpassword
+      screen_name:
+        type: string
+        description: screen name of the user.
+        example: ほげほげ
+        maxLength: 20
+      userid:
+        type: string
+        description: User ID
+        example: hogehoge
+        pattern: '[^a-zA-Z0-9_]+'
+        minLength: 1
+        maxLength: 15
+    example:
+      password: testpassword
+      screen_name: ほげほげ
+      userid: hogehoge
+    required:
+    - userid
+    - screen_name
+    - password
+  PostCreateRequestBody:
+    title: PostCreateRequestBody
+    type: object
+    properties:
+      body:
+        type: string
+        example: Ut expedita rerum.
+    example:
+      body: Molestias odio sunt nesciunt aperiam est.
+    required:
+    - body
+  PostReferenceRequestBody:
+    title: PostReferenceRequestBody
+    type: object
+    properties:
+      body:
+        type: string
+        description: 投稿内容
+        example: にゃーん
+      posted_at:
+        type: string
+        description: 投稿日時
+        example: "1983-09-06T22:41:53Z"
+        format: date-time
+      screen_name:
+        type: string
+        example: ほげほげ
+        maxLength: 20
+      user_id:
+        type: string
+        description: User ID
+        example: hogehoge
+        pattern: '[^a-zA-Z0-9_]+'
+        minLength: 1
+        maxLength: 15
+    example:
+      body: にゃーん
+      posted_at: "1983-10-08T18:08:57Z"
+      screen_name: ほげほげ
+      user_id: hogehoge
+    required:
+    - posted_at
+    - user_id
+    - screen_name
+    - body
+securityDefinitions:
+  JWT_header_Authorization:
+    type: apiKey
+    description: |2-
+
+      **Security Scopes**:
+        * `api:access`: API access
+        * `api:admin`: 管理者によるアクセス権限
+    name: Authorization
+    in: header

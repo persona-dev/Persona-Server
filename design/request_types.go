@@ -1,37 +1,51 @@
 package design
 
 import (
-	_ "github.com/goadesign/goa/design"
-	. "github.com/goadesign/goa/design/apidsl"
+	. "goa.design/goa/v3/dsl"
 )
 
+var UserIDAttribute = func() {
+	Description("User ID")
+	Example("hogehoge")
+	MaxLength(15)
+	MinLength(1)
+	Pattern(`[^a-zA-Z0-9_]+`)
+}
+
+var ScreenNameAttribute = func() {
+	Example("ほげほげ")
+	MaxLength(20)
+}
+
+var PasswordAttribute = func() {
+	Example("testpassword")
+}
+
+var BodyAttribute = func() {
+	Example("にゃーん")
+}
+
 var NewPostPayload = Type("NewPostPayload", func() {
-	Attribute("body", func() {
-		Example("にゃーん")
-		MaxLength(500)
-	})
+	Attribute("body", String, "")
+	Token("token", String, "JWT Token.")
+	Required("body", "token")
+})
+
+var DeletePostPayload = Type("DeletePostPayload", func() {
+	Attribute("post_id", String, "unique id of the post.")
+	Token("token", String, "JWT Token.")
+	Required("post_id", "token")
 })
 
 var NewAccountPayload = Type("NewAccountPayload", func() {
-	Attribute("userid", func() {
-		Example("hogehoge")
-		MaxLength(15)
-	})
-	Attribute("screen_name", func() {
-		Example("ほげほげ")
-		MaxLength(20)
-	})
-	Attribute("password", func() {
-		Example("testpassword")
-	})
+	Attribute("userid", String, "unique id of the user.", UserIDAttribute)
+	Attribute("screen_name", String, "screen name of the user.", ScreenNameAttribute)
+	Attribute("password", String, "password of the user.", PasswordAttribute)
+	Required("userid", "screen_name", "password")
 })
 
 var LoginPayload = Type("LoginPayload", func() {
-	Attribute("userid", func() {
-		Example("fugafuga")
-		MaxLength(15)
-	})
-	Attribute("password", func() {
-		Example("testpassword")
-	})
+	Attribute("userid", String, "", UserIDAttribute)
+	Attribute("password", String, "", PasswordAttribute)
+	Required("userid", "password")
 })
