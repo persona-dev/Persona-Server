@@ -132,8 +132,6 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("failed: json.Unmarshal(): %s", err)
 	}
 
-	fmt.Println(Response.Token)
-
 	Token := strings.Split(Response.Token, ".")
 	Header := `{"alg":"RS512","typ":"JWT"}`
 	ResponseHeader, err := base64.URLEncoding.DecodeString(Token[0])
@@ -160,4 +158,81 @@ func TestLogin(t *testing.T) {
 	if Payload.ExpiresAt < time.Now().Add(time.Minute*5).Unix() {
 		t.Fatalf("failed: jwt token's exp invaild")
 	}
+}
+
+func TestInvaildRegister(t *testing.T) {
+	e := echo.New()
+	e.Validator = &CustomValidator{validator: validator.New()}
+
+	h, err := SetUpDataBase()
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer h.DB.Close()
+
+	t.Run("Not enough userid field", func(t *testing.T) {
+		RequestJSON := `{"userid":"","email":"testuser@example.com","screen_name":"testuser1","password":"password"}`
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/new", strings.NewReader(RequestJSON))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		c := e.NewContext(req, rec)
+		if err := h.Register(c); err != nil && err != echo.ErrBadRequest {
+			t.Fatalf("failed: Register(): %s", err)
+		}
+	})
+	t.Run("Not enough email field", func(t *testing.T) {
+		RequestJSON := `{"userid":"testuser2","email":"","screen_name":"testuser1","password":"password"}`
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(RequestJSON))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/v1/auth/new")
+		if err := h.Register(c); err != nil && err != echo.ErrBadRequest {
+			t.Fatalf("failed: Register(): %s", err)
+		}
+	})
+	t.Run("Invaild email field", func(t *testing.T) {
+		RequestJSON := `{"userid":"testuser3","email":"testuser","screen_name":"testuser1","password":"password"}`
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(RequestJSON))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/v1/auth/new")
+		if err := h.Register(c); err != nil && err != echo.ErrBadRequest {
+			t.Fatalf("failed: Register(): %s", err)
+		}
+	})
+	t.Run("Invaild userid field", func(t *testing.T) {
+		RequestJSON := `{"userid":"testtesttestuser3","email":"testuser@example.com","screen_name":"testuser1","password":"password"}`
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(RequestJSON))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/v1/auth/new")
+		if err := h.Register(c); err != nil && err != echo.ErrBadRequest {
+			t.Fatalf("failed: Register(): %s", err)
+		}
+	})
+	t.Run("Invaild screen name field", func(t *testing.T) {
+		RequestJSON := `{"userid":"testtesttestuser3","email":"testuser@example.com","screen_name":"testtesttesttesttesttesttesttesttesttesttesttestuser1","password":"password"}`
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(RequestJSON))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/v1/auth/new")
+		if err := h.Register(c); err != nil && err != echo.ErrBadRequest {
+			t.Fatalf("failed: Register(): %s", err)
+		}
+	})
+	t.Run("Invaild character in userid field", func(t *testing.T) {
+		RequestJSON := `{"userid":"test%&#*/\","email":"testuser@example.com","screen_name":"testuser1","password":"password"}`
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(RequestJSON))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		c := e.NewContext(req, rec)
+		c.SetPath("/api/v1/auth/new")
+		if err := h.Register(c); err != nil && err != echo.ErrBadRequest {
+			t.Fatalf("failed: Register(): %s", err)
+		}
+	})
 }
