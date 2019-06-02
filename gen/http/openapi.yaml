@@ -9,7 +9,7 @@ consumes:
 produces:
 - application/json
 paths:
-  /api/v1/auth/new:
+  /auth/new:
     post:
       tags:
       - Authorization
@@ -31,7 +31,7 @@ paths:
           description: Created response.
       schemes:
       - http
-  /api/v1/auth/signature:
+  /auth/signature:
     post:
       tags:
       - Authorization
@@ -52,7 +52,7 @@ paths:
           description: OK response.
       schemes:
       - http
-  /api/v1/posts/{post_id}:
+  /posts/{post_id}:
     get:
       tags:
       - Post
@@ -110,7 +110,7 @@ paths:
       - http
       security:
       - JWT_header_Authorization: []
-  /api/v1/posts/new:
+  /posts/new:
     post:
       tags:
       - Post

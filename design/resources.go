@@ -11,7 +11,7 @@ var JWT = JWTSecurity("JWT", func() {
 
 var _ = Service("Authorization", func() {
 	HTTP(func() {
-		Path("/api/v1/auth")
+		Path("/auth")
 	})
 	Method("login", func() {
 		Description("ログイン")
@@ -42,7 +42,7 @@ var _ = Service("Authorization", func() {
 
 var _ = Service("Post", func() {
 	HTTP(func() {
-		Path("/api/v1/posts")
+		Path("/posts")
 	})
 	Security(JWT, func() {
 		Scope("api:access")

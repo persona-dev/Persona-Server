@@ -51,9 +51,9 @@ func New(
 ) *Server {
 	return &Server{
 		Mounts: []*MountPoint{
-			{"Create", "POST", "/api/v1/posts/new"},
-			{"Reference", "GET", "/api/v1/posts/{post_id}"},
-			{"Delete", "DELETE", "/api/v1/posts/{post_id}"},
+			{"Create", "POST", "/posts/new"},
+			{"Reference", "GET", "/posts/{post_id}"},
+			{"Delete", "DELETE", "/posts/{post_id}"},
 		},
 		Create:    NewCreateHandler(e.Create, mux, dec, enc, eh),
 		Reference: NewReferenceHandler(e.Reference, mux, dec, enc, eh),
@@ -87,7 +87,7 @@ func MountCreateHandler(mux goahttp.Muxer, h http.Handler) {
 			h.ServeHTTP(w, r)
 		}
 	}
-	mux.Handle("POST", "/api/v1/posts/new", f)
+	mux.Handle("POST", "/posts/new", f)
 }
 
 // NewCreateHandler creates a HTTP handler which loads the HTTP request and
@@ -139,7 +139,7 @@ func MountReferenceHandler(mux goahttp.Muxer, h http.Handler) {
 			h.ServeHTTP(w, r)
 		}
 	}
-	mux.Handle("GET", "/api/v1/posts/{post_id}", f)
+	mux.Handle("GET", "/posts/{post_id}", f)
 }
 
 // NewReferenceHandler creates a HTTP handler which loads the HTTP request and
@@ -191,7 +191,7 @@ func MountDeleteHandler(mux goahttp.Muxer, h http.Handler) {
 			h.ServeHTTP(w, r)
 		}
 	}
-	mux.Handle("DELETE", "/api/v1/posts/{post_id}", f)
+	mux.Handle("DELETE", "/posts/{post_id}", f)
 }
 
 // NewDeleteHandler creates a HTTP handler which loads the HTTP request and

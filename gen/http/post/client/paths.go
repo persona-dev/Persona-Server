@@ -13,15 +13,15 @@ import (
 
 // CreatePostPath returns the URL path to the Post service create HTTP endpoint.
 func CreatePostPath() string {
-	return "/api/v1/posts/new"
+	return "/posts/new"
 }
 
 // ReferencePostPath returns the URL path to the Post service reference HTTP endpoint.
 func ReferencePostPath(postID string) string {
-	return fmt.Sprintf("/api/v1/posts/%v", postID)
+	return fmt.Sprintf("/posts/%v", postID)
 }
 
 // DeletePostPath returns the URL path to the Post service delete HTTP endpoint.
 func DeletePostPath(postID string) string {
-	return fmt.Sprintf("/api/v1/posts/%v", postID)
+	return fmt.Sprintf("/posts/%v", postID)
 }

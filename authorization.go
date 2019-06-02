@@ -1,4 +1,4 @@
-package simplesns
+package persona
 
 import (
 	"context"
