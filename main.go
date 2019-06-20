@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/eniehack/simple-sns-go/handler"
+	"github.com/eniehack/persona-server/handler"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jmoiron/sqlx"
@@ -26,15 +26,25 @@ type CustomValidator struct {
 	validator *validator.Validate
 }
 
+/*
+// UserIDValidate validate handler.RegisterParams.UserID Field.
+func UserIDValidate(fl validator.FieldLevel) bool {
+	if data := handler.CheckRegexp(`[^a-zA-Z0-9_]+`, fl.Field().String()); !data {
+		return true
+	}
+	return false
+}
+*/
+
 func (cv *CustomValidator) Validate(i interface{}) error {
+	//cv.Validator.RegisterValidation("userid", UserIDValidate)
 	return cv.validator.Struct(i)
 }
 
-/*
 func NewValidator() echo.Validator {
 	return &CustomValidator{validator: validator.New()}
 }
-*/
+
 func JWTAuthentication(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		AuthorizationHeader := c.Request().Header.Get("Authorization")
@@ -125,7 +135,7 @@ func main() {
 		MaxAge:        3600,
 		ExposeHeaders: []string{"Authorization"},
 	}))
-	e.Validator = &CustomValidator{validator: validator.New()}
+	e.Validator = NewValidator()
 
 	flag.StringVar(&DataBaseName, "database", "sqlite3", "Database name. sqlite3 or postgres.")
 	flag.Parse()

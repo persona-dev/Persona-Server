@@ -75,11 +75,12 @@ func (h *Handler) Register(c echo.Context) error {
 		return echo.ErrBadRequest
 	}
 
-	/*
-		if len := len(c.FormValue("userid")); CheckRegexp(`[^a-zA-Z0-9_]+`, c.FormValue("userid")) || len > 15 || len == 0 {
-			return echo.ErrBadRequest
-		}
-	*/
+	useridValidate := CheckRegexp(`[^a-zA-Z0-9_]+`, RequestData.UserID)
+	switch useridValidate {
+	case false:
+	default:
+		return echo.ErrBadRequest
+	}
 
 	UserIDConflict, err := h.CheckUniqueUserID(strings.ToLower(RequestData.UserID))
 	if err != nil {
