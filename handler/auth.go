@@ -29,7 +29,12 @@ func (h *Handler) Login(c echo.Context) error {
 	}
 
 	if err := c.Validate(RequestData); err != nil {
-		return echo.ErrUnauthorized
+		useridValidation := CheckRegexp(`[^a-zA-Z0-9_]+`, RequestData.UserName)
+		switch useridValidation {
+		case false:
+		default:
+			return echo.ErrUnauthorized
+		}
 	}
 
 	UserID, Password, err := h.RoadPasswordAndUserID(RequestData.UserName)

@@ -24,7 +24,7 @@ type (
 		Password   string `json:"password" validate:"required"`
 	}
 	LoginParams struct {
-		UserName string `json:"userid" validate:"required"`
+		UserName string `json:"userid" validate:"required,email"`
 		Password string `json:"password" validate:"required"`
 	}
 )
