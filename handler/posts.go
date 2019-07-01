@@ -14,16 +14,26 @@ import (
 )
 
 func (h *Handler) CreatePosts(c echo.Context) error {
+	requestData := new(CreatePostParams)
+
 	User := c.Get("token").(*jwt.Token)
 	Claims := User.Claims.(jwt.MapClaims)
 
-	Body := c.FormValue("body")
-	if Body == "" {
-		log.Println("No body.")
-		return echo.ErrInternalServerError
+	if err := c.Bind(requestData); err != nil {
+		return echo.ErrBadRequest
 	}
 
-	if err := h.InsertPost(Claims, Body); err != nil {
+	if err := c.Validate(requestData); err != nil {
+		return echo.ErrBadRequest
+	}
+	/*
+		Body := c.FormValue("body")
+		if Body == "" {
+			log.Println("No body.")
+			return echo.ErrInternalServerError
+		}
+	*/
+	if err := h.InsertPost(Claims, requestData); err != nil {
 		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"status_code": "500",
@@ -33,7 +43,7 @@ func (h *Handler) CreatePosts(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-func (h *Handler) InsertPost(Claims jwt.MapClaims, Body string) error {
+func (h *Handler) InsertPost(Claims jwt.MapClaims, requestData *CreatePostParams) error {
 
 	db := h.DB
 	UserID := Claims["aud"]
@@ -42,7 +52,7 @@ func (h *Handler) InsertPost(Claims jwt.MapClaims, Body string) error {
 	BindParams := map[string]interface{}{
 		"PostID": ulid.String(),
 		"UserID": UserID,
-		"Body":   Body,
+		"Body":   requestData.Body,
 		"Now":    time.Now().Format(time.RFC3339Nano),
 	}
 
