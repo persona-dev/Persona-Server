@@ -27,6 +27,9 @@ type (
 		UserName string `json:"userid" validate:"required,email"`
 		Password string `json:"password" validate:"required"`
 	}
+	CreatePostParams struct {
+		Body string `json:"body" validate:"required"`
+	}
 )
 
 var (
