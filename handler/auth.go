@@ -25,14 +25,11 @@ func (h *Handler) Login(c echo.Context) error {
 	RequestData := new(LoginParams)
 
 	if err := c.Bind(RequestData); err != nil {
-		return echo.ErrUnauthorized
+		return echo.ErrInternalServerError
 	}
 
 	if err := c.Validate(RequestData); err != nil {
-		useridValidation := CheckRegexp(`[^a-zA-Z0-9_]+`, RequestData.UserName)
-		switch useridValidation {
-		case false:
-		default:
+		if useridValidation := CheckRegexp(`[^a-zA-Z0-9_]+`, RequestData.UserName); useridValidation {
 			return echo.ErrUnauthorized
 		}
 	}
@@ -74,17 +71,20 @@ func (h *Handler) Register(c echo.Context) error {
 	User := new(RegisterParams)
 
 	if err := c.Bind(RequestData); err != nil {
-		return echo.ErrBadRequest
+		return echo.ErrInternalServerError
 	}
 	if err := c.Validate(RequestData); err != nil {
-		return echo.ErrBadRequest
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"status_code": "400",
+			"body": "invaild request",
+		})
 	}
 
-	useridValidate := CheckRegexp(`[^a-zA-Z0-9_]+`, RequestData.UserID)
-	switch useridValidate {
-	case false:
-	default:
-		return echo.ErrBadRequest
+	if useridValidate := CheckRegexp(`[^a-zA-Z0-9_]+`, RequestData.UserID); useridValidate {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"status_code": "400",
+			"body": "invaild userid",
+		})
 	}
 
 	UserIDConflict, err := h.CheckUniqueUserID(strings.ToLower(RequestData.UserID))
@@ -97,6 +97,7 @@ func (h *Handler) Register(c echo.Context) error {
 	if !UserIDConflict {
 		return c.JSON(http.StatusConflict, echo.Map{
 			"status_code": "409",
+			"body": "conflict userid",
 		})
 	}
 	User.UserID = strings.ToLower(RequestData.UserID)
@@ -111,6 +112,7 @@ func (h *Handler) Register(c echo.Context) error {
 	if !EMailConflict {
 		return c.JSON(http.StatusConflict, echo.Map{
 			"status_code": "409",
+			"body": "conflict mail address",
 		})
 	}
 	User.EMail = RequestData.EMail
