@@ -1,1 +1,1 @@
-web: bin/simple-sns-go -database postgres
+web: bin/persona-server -database postgres
