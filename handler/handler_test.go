@@ -15,8 +15,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	migrate "github.com/rubenv/sql-migrate"
 	"gopkg.in/go-playground/validator.v9"
-
-	"github.com/labstack/echo"
 )
 
 type CustomValidator struct {
@@ -63,12 +61,15 @@ func TestRegister(t *testing.T) {
 	Response := new(ResponseParams)
 	RequestJSON := `{"userid":"testuser","email":"testuser@example.com","screen_name":"testuser1","password":"password"}`
 
-	e := echo.New()
-	e.Validator = &CustomValidator{validator: validator.New()}
+	//e := echo.New()
+	//e.Validator = &CustomValidator{validator: validator.New()}
+	testserver := httptest.NewServer(http.HandlerFunc(h.Register))
+	defer testserver.Close()
+
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/new", strings.NewReader(RequestJSON))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+//	c := e.NewContext(req, rec)
 
 	h, err := SetUpDataBase()
 	if err != nil {
@@ -76,7 +77,9 @@ func TestRegister(t *testing.T) {
 	}
 	defer h.DB.Close()
 
-	if err := h.Register(c); err != nil {
+	h.validate = validator.New()
+
+	if err := h.Register(rec, req); err != nil {
 		t.Fatalf("failed: Register(): %s", err)
 	}
 
@@ -106,13 +109,13 @@ func TestLogin(t *testing.T) {
 	Response := new(ResponseParams)
 	RequestJSON := `{"userid":"testuser","password":"password"}`
 
-	e := echo.New()
-	e.Validator = &CustomValidator{validator: validator.New()}
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(RequestJSON))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	//e := echo.New()
+	//e.Validator = &CustomValidator{validator: validator.New()}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/signature", strings.NewReader(RequestJSON))
+	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPath("api/v1/auth/signature")
+	//c := e.NewContext(req, rec)
+	//c.SetPath(")
 
 	h, err := SetUpDataBase()
 	if err != nil {
@@ -120,7 +123,9 @@ func TestLogin(t *testing.T) {
 	}
 	defer h.DB.Close()
 
-	if err := h.Login(c); err != nil {
+	h.validate = validator.New()
+
+	if err := h.Login(rec, req); err != nil {
 		t.Fatalf("failed: Login(): %s", err)
 	}
 
@@ -161,8 +166,8 @@ func TestLogin(t *testing.T) {
 }
 
 func TestInvaildRegister(t *testing.T) {
-	e := echo.New()
-	e.Validator = &CustomValidator{validator: validator.New()}
+	//e := echo.New()
+	//e.Validator = &CustomValidator{validator: validator.New()}
 
 	h, err := SetUpDataBase()
 	if err != nil {
@@ -170,35 +175,40 @@ func TestInvaildRegister(t *testing.T) {
 	}
 	defer h.DB.Close()
 
+	h.validate = validator.New()
+
 	t.Run("Not enough userid field", func(t *testing.T) {
 		RequestJSON := `{"userid":"","email":"testuser@example.com","screen_name":"testuser1","password":"password"}`
+
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/new", strings.NewReader(RequestJSON))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		c := e.NewContext(req, rec)
-		if err := h.Register(c); err != nil && err != echo.ErrBadRequest {
+		req.Header.Set("Content-Type", "application/json")
+
+		//c := e.NewContext(req, rec)
+		if err := h.Register(rec, req); err != nil && err != echo.ErrBadRequest {
 			t.Fatalf("failed: Register(): %s", err)
 		}
 	})
 	t.Run("Not enough email field", func(t *testing.T) {
 		RequestJSON := `{"userid":"testuser2","email":"","screen_name":"testuser1","password":"password"}`
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(RequestJSON))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		c := e.NewContext(req, rec)
-		c.SetPath("/api/v1/auth/new")
-		if err := h.Register(c); err != nil && err != echo.ErrBadRequest {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/new", strings.NewReader(RequestJSON))
+		req.Header.Set("Content-Type", "application/json")
+
+		//c := e.NewContext(req, rec)
+		//c.SetPath("/api/v1/auth/new")
+		if err := h.Register(rec, req); err != nil && err != echo.ErrBadRequest {
 			t.Fatalf("failed: Register(): %s", err)
 		}
 	})
 	t.Run("Invaild email field", func(t *testing.T) {
 		RequestJSON := `{"userid":"testuser3","email":"testuser","screen_name":"testuser1","password":"password"}`
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(RequestJSON))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		c := e.NewContext(req, rec)
-		c.SetPath("/api/v1/auth/new")
-		if err := h.Register(c); err != nil && err != echo.ErrBadRequest {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/new", strings.NewReader(RequestJSON))
+		req.Header.Set("Content-Type", "application/json")
+		//c := e.NewContext(req, rec)
+		//c.SetPath("/api/v1/auth/new")
+		if err := h.Register(rec, req); err != nil && err != echo.ErrBadRequest {
 			t.Fatalf("failed: Register(): %s", err)
 		}
 	})
@@ -206,32 +216,32 @@ func TestInvaildRegister(t *testing.T) {
 		RequestJSON := `{"userid":"testtesttestuser3","email":"testuser@example.com","screen_name":"testuser1","password":"password"}`
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(RequestJSON))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		c := e.NewContext(req, rec)
-		c.SetPath("/api/v1/auth/new")
-		if err := h.Register(c); err != nil && err != echo.ErrBadRequest {
+		req.Header.Set("Content-Type", "application/json")
+		//c := e.NewContext(req, rec)
+		//c.SetPath("/api/v1/auth/new")
+		if err := h.Register(rec, req); err != nil && err != echo.ErrBadRequest {
 			t.Fatalf("failed: Register(): %s", err)
 		}
 	})
 	t.Run("Invaild screen name field", func(t *testing.T) {
 		RequestJSON := `{"userid":"testtesttestuser3","email":"testuser@example.com","screen_name":"testtesttesttesttesttesttesttesttesttesttesttestuser1","password":"password"}`
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(RequestJSON))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		c := e.NewContext(req, rec)
-		c.SetPath("/api/v1/auth/new")
-		if err := h.Register(c); err != nil && err != echo.ErrBadRequest {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/new", strings.NewReader(RequestJSON))
+		req.Header.Set("Content-Type", "application/json")
+		//c := e.NewContext(req, rec)
+		//c.SetPath("/api/v1/auth/new")
+		if err := h.Register(rec, req); err != nil && err != echo.ErrBadRequest {
 			t.Fatalf("failed: Register(): %s", err)
 		}
 	})
 	t.Run("Invaild character in userid field", func(t *testing.T) {
 		RequestJSON := `{"userid":"test%&#*/\","email":"testuser@example.com","screen_name":"testuser1","password":"password"}`
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(RequestJSON))
-		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-		c := e.NewContext(req, rec)
-		c.SetPath("/api/v1/auth/new")
-		if err := h.Register(c); err != nil && err != echo.ErrBadRequest {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/new", strings.NewReader(RequestJSON))
+		req.Header.Set("Content-Type", "application/json")
+		//c := e.NewContext(req, rec)
+		//c.SetPath("/api/v1/auth/new")
+		if err := h.Register(rec, req); err != nil && err != echo.ErrBadRequest {
 			t.Fatalf("failed: Register(): %s", err)
 		}
 	})
