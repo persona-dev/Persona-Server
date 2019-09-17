@@ -44,7 +44,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.validate.Struct(requestData); err != nil {
+	if err := h.Validate.Struct(requestData); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write(MakeErrorResponseBody(http.StatusUnauthorized, "incorrect request json"))
@@ -122,7 +122,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.validate.Struct(requestData); err != nil {
+	if err := h.Validate.Struct(requestData); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(MakeErrorResponseBody(http.StatusBadRequest, "invaild request json format"))
 		return

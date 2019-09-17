@@ -98,8 +98,8 @@ func main() {
 	validator := validator.New()
 
 	h := &handler.Handler{
-		DB: db,
-		validate: &validator
+		DB:       db,
+		Validate: validator,
 	}
 
 	r.Route("/api/v1", func(r chi.Router) {

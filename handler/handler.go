@@ -10,7 +10,7 @@ import (
 type (
 	Handler struct {
 		DB       *sqlx.DB
-		validate *validator.Validate
+		Validate *validator.Validate
 	}
 	Argon2Params struct {
 		memory      uint32
