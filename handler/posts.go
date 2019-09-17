@@ -10,6 +10,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	request "github.com/dgrijalva/jwt-go/request"
+	"github.com/eniehack/persona-server/utils"
 	"github.com/jmoiron/sqlx"
 	"github.com/oklog/ulid"
 )
@@ -24,7 +25,7 @@ func (h *Handler) CreatePosts(w http.ResponseWriter, r *http.Request) {
 		if !err {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		} else {
-			return LoadPrivateKey()
+			return utils.ReadPublicKey()
 		}
 	})
 
@@ -42,7 +43,7 @@ func (h *Handler) CreatePosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.validate.Struct(requestData); err != nil {
+	if err := h.Validate.Struct(requestData); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(MakeErrorResponseBody(http.StatusBadRequest, "invaild request format"))
 		return

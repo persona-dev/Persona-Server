@@ -1,18 +1,16 @@
 package main
 
 import (
-	"crypto/rsa"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/eniehack/persona-server/handler"
+	"github.com/eniehack/persona-server/utils"
 	"github.com/go-chi/cors"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/jwtauth"
@@ -23,16 +21,6 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 	"gopkg.in/go-playground/validator.v9"
 )
-
-// LookupPublicKey look up RSA public key from ./public-key.pem.
-func LookupPublicKey() (*rsa.PublicKey, error) {
-	Key, err := ioutil.ReadFile("public-key.pem")
-	if err != nil {
-		return nil, err
-	}
-	ParsedKey, err := jwt.ParseRSAPublicKeyFromPEM(Key)
-	return ParsedKey, err
-}
 
 func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
 	switch DataBaseName {
@@ -75,7 +63,7 @@ func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
 }
 
 func main() {
-	rsapublickey, err := LookupPublicKey()
+	rsapublickey, err := utils.ReadPublicKey()
 	if err != nil {
 		log.Fatalf("init(): Failed to road RSA public key: %s", err)
 	}
@@ -115,8 +103,8 @@ func main() {
 	}
 
 	r.Route("/api/v1/auth", func(r chi.Router) {
-		r.Post("/signature", h.Login)
-		r.Post("/new", h.Register)
+			r.Post("/signature", h.Login)
+			r.Post("/new", h.Register)
 
 		r.Route("/posts", func(r chi.Router) {
 			r.Use(jwtauth.Verifier(tokenAuth))
