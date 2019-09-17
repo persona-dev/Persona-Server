@@ -1,0 +1,57 @@
+= Persona-Server
+
+image:https://img.shields.io/github/license/eniehack/persona-server?style=flat-square[GitHub]
+
+a Social Network designed based on personality.
+
+== Copyright
+
+Copyright &copy; 2019 Nakaya (https://github.com/eniehack)
+
+this software is under link:http://www.gnu.org/licenses/agpl-3.0.html[AGPL v3.0].
+
+== License
+
+persona-server is built using opensource software:
+
+=== link:https://github.com/go-chi/chi[chi]
+
+Copyright (c) 2015-present Peter Kieltyka (https://github.com/pkieltyka), Google Inc. +
+link:https://github.com/go-chi/chi/blob/master/LICENSE[MIT License]
+
+=== link:https://github.com/go-playground/validator/[validator]
+
+Copyright (c) 2015 Dean Karn +
+link:https://github.com/go-playground/validator/[MIT License]
+
+=== link:https://github.com/jmoiron/sqlx/[sqlx]
+
+Copyright (c) 2013, Jason Moiron +
+link:https://github.com/jmoiron/sqlx/blob/master/LICENSE.md[MIT License]
+
+=== link:https://github.com/mattn/go-sqlite3/[go-sqlite3]
+
+Copyright (c) 2014 Yasuhiro Matsumoto +
+link:https://github.com/lib/pq/blob/master/LICENSE.md[MIT License]
+
+=== link:https://github.com/lib/pq/[pq]
+
+Copyright (c) 2011-2013, 'pq' Contributors Portions +
+Copyright (C) 2011 Blake Mizerany +
+
+link:https://github.com/lib/pq/blob/master/LICENSE.md[License]
+
+=== link:https://github.com/dgrijalva/jwt-go/[jwt-go]
+
+Copyright (c) 2012 Dave Grijalva +
+link:https://github.com/dgrijalva/jwt-go/blob/master/LICENSE[MIT License]
+
+=== link:https://github.com/rubenv/sql-migrate/[sql-migrate]
+
+Copyright (C) 2014-2017 by Ruben Vermeersch <ruben@rocketeer.be> +
+link:https://github.com/rubenv/sql-migrate/blob/master/LICENSE[MIT License]
+
+=== link:https://github.com/oklog/ulid/[ulid]
+
+Copyright 2016 The Oklog Authors +
+link:https://github.com/oklog/ulid/blob/master/LICENSE[Apache License 2.0]
