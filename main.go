@@ -8,71 +8,23 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/eniehack/persona-server/handler"
+	"github.com/go-chi/cors"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/jwtauth"
 	"github.com/jmoiron/sqlx"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 	migrate "github.com/rubenv/sql-migrate"
 	"gopkg.in/go-playground/validator.v9"
 )
 
-type CustomValidator struct {
-	validator *validator.Validate
-}
-
-/*
-// UserIDValidate validate handler.RegisterParams.UserID Field.
-func UserIDValidate(fl validator.FieldLevel) bool {
-	if data := handler.CheckRegexp(`[^a-zA-Z0-9_]+`, fl.Field().String()); !data {
-		return true
-	}
-	return false
-}
-*/
-
-func (cv *CustomValidator) Validate(i interface{}) error {
-	//cv.Validator.RegisterValidation("userid", UserIDValidate)
-	return cv.validator.Struct(i)
-}
-
-func NewValidator() echo.Validator {
-	return &CustomValidator{validator: validator.New()}
-}
-
-func JWTAuthentication(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		AuthorizationHeader := c.Request().Header.Get("Authorization")
-		SplitAuthorization := strings.Split(AuthorizationHeader, " ")
-		if SplitAuthorization[0] != "Bearer" {
-			return &echo.HTTPError{
-				Code:    http.StatusUnauthorized,
-				Message: "invalid token.",
-			}
-		}
-		token, err := jwt.Parse(SplitAuthorization[1], func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-			}
-			return LookupPublicKey()
-		})
-		if err != nil || !token.Valid {
-			return &echo.HTTPError{
-				Code:     http.StatusUnauthorized,
-				Message:  "invalid token.",
-				Internal: err,
-			}
-		}
-		c.Set("token", token)
-		return next(c)
-	}
-}
-
+// LookupPublicKey look up RSA public key from ./public-key.pem.
 func LookupPublicKey() (*rsa.PublicKey, error) {
 	Key, err := ioutil.ReadFile("public-key.pem")
 	if err != nil {
@@ -123,46 +75,63 @@ func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
 }
 
 func main() {
+	rsapublickey, err := LookupPublicKey()
+	if err != nil {
+		log.Fatalf("init(): Failed to road RSA public key: %s", err)
+	}
+	tokenAuth := jwtauth.New("RS512", rsapublickey, nil)
+
 	var DataBaseName string
 
-	e := echo.New()
+	corsSettings := cors.New(cors.Options{
+		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodOptions, http.MethodDelete},
+		AllowedHeaders: []string{"Authorization", "Content-Type"},
+		MaxAge:         3600,
+		ExposedHeaders: []string{"Authorization"},
+	})
 
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
-	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowMethods:  []string{http.MethodGet, http.MethodPost, http.MethodOptions, http.MethodDelete},
-		AllowHeaders:  []string{"Authorization", "Content-Type"},
-		MaxAge:        3600,
-		ExposeHeaders: []string{"Authorization"},
-	}))
-	e.Validator = NewValidator()
+	r := chi.NewRouter()
+
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(corsSettings.Handler)
 
 	flag.StringVar(&DataBaseName, "database", "sqlite3", "Database name. sqlite3 or postgres.")
 	flag.Parse()
 
 	db, err := SetUpDataBase(DataBaseName)
 	if err != nil {
-		e.Logger.Fatal(err)
+		log.Fatalln(err)
 	}
 
 	db.SetConnMaxLifetime(1)
 	defer db.Close()
 
-	h := &handler.Handler{DB: db}
+	validator := validator.New()
 
-	Authg := e.Group("/api/v1/auth")
-	Authg.POST("/signature", h.Login)
-	Authg.POST("/new", h.Register)
+	h := &handler.Handler{
+		DB: db,
+		validate: &validator
+	}
 
-	Postg := e.Group("/api/v1/posts")
-	Postg.Use(JWTAuthentication)
-	Postg.POST("/new", h.CreatePosts)
+	r.Route("/api/v1/auth", func(r chi.Router) {
+		r.Post("/signature", h.Login)
+		r.Post("/new", h.Register)
 
-	e.Logger.Fatal(
-		e.Start(
-			fmt.Sprintf(
-				":%s", os.Getenv("PORT"),
+		r.Route("/posts", func(r chi.Router) {
+			r.Use(jwtauth.Verifier(tokenAuth))
+			r.Use(jwtauth.Authenticator)
+			r.Post("/new", h.CreatePosts)
+		})
+	})
+	if os.Getenv("PORT") == "" {
+		log.Fatal(http.ListenAndServe(":3000", r))
+	} else {
+		log.Fatal(
+			http.ListenAndServe(
+				fmt.Sprintf(":%s", os.Getenv("PORT")),
+				r,
 			),
-		),
-	)
+		)
+	}
 }

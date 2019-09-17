@@ -4,11 +4,13 @@ import (
 	"errors"
 
 	"github.com/jmoiron/sqlx"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 type (
 	Handler struct {
-		DB *sqlx.DB
+		DB       *sqlx.DB
+		validate *validator.Validate
 	}
 	Argon2Params struct {
 		memory      uint32
@@ -18,17 +20,24 @@ type (
 		keyLength   uint32
 	}
 	RegisterParams struct {
-		UserID     string `json:"userid" validate:"required,max=15"`
+		UserID     string `json:"userid" validate:"required,min=1,max=15"`
 		EMail      string `json:"email" validate:"required,email"`
 		ScreenName string `json:"screen_name" validate:"required,max=50"`
 		Password   string `json:"password" validate:"required"`
 	}
 	LoginParams struct {
-		UserName string `json:"userid" validate:"required,email"`
+		UserName string `json:"userid" validate:"required"`
 		Password string `json:"password" validate:"required"`
 	}
 	CreatePostParams struct {
 		Body string `json:"body" validate:"required"`
+	}
+	ErrorPayload struct {
+		StatusCode string `json:"status_code"`
+		Detail     string `json:"detail"`
+	}
+	LoginResponseBody struct {
+		Token string
 	}
 )
 
