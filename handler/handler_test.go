@@ -326,7 +326,7 @@ func TestInvaildRegister(t *testing.T) {
 	})
 	t.Run("Invaild character in userid field", func(t *testing.T) {
 		payload := new(ErrorPayload)
-		RequestJSON := `{"userid":"test%&#*/\","email":"testuser@example.com","screen_name":"testuser1","password":"password"}`
+		RequestJSON := `{"userid":"test%&#*","email":"testuser@example.com","screen_name":"testuser1","password":"password"}`
 
 		client := new(http.Client)
 		server := httptest.NewServer(http.HandlerFunc(h.Register))
@@ -347,6 +347,7 @@ func TestInvaildRegister(t *testing.T) {
 			t.Fatalf("Failed: invaild content type, %s", res.Header.Get("Content-Type"))
 		}
 		if res.StatusCode != http.StatusBadRequest {
+			fmt.Println(payload)
 			t.Fatalf("failed: Invaild character in userid field: invaild status code, %d", res.StatusCode)
 		}
 		if payload.StatusCode != "400" {
