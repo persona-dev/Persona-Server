@@ -102,9 +102,11 @@ func main() {
 		validate: &validator
 	}
 
-	r.Route("/api/v1/auth", func(r chi.Router) {
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Route("/auth", func(r chi.Router) {
 			r.Post("/signature", h.Login)
 			r.Post("/new", h.Register)
+		})
 
 		r.Route("/posts", func(r chi.Router) {
 			r.Use(jwtauth.Verifier(tokenAuth))
