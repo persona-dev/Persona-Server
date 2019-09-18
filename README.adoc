@@ -18,6 +18,10 @@ a Social Network designed based on personality.
 * Easy to deploy
 * Easy to manage
 
+== Disscuss
+
+Matrix: link:https://matrix.to/#/!uZgXiCzSwZSsSsdIvg:matrix-jp.net?via=matrix-jp.net[#persona-b:matrix-jp.net]
+
 == Loadmap
 
 === until v1.0.0
