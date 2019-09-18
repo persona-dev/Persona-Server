@@ -7,6 +7,29 @@ image:https://goreportcard.com/badge/github.com/eniehack/persona-server[Go Repor
 
 a Social Network designed based on personality.
 
+== Goal
+
+=== **fun**
+
+=== **Lightweight**
+
+=== **Easy**
+
+* Easy to deploy
+* Easy to manage
+
+== Loadmap
+
+=== until v1.0.0
+
+* Support Layer
+* Support list, block, mute, media-upload, amend post, set avatar, fav, emoji, mention, streaming.
+* Support to link with Keybase.
+
+=== until v2.0.0
+
+* Federate other SNS through ActivityPub.
+
 == Copyright
 
 Copyright &copy; 2019 Nakaya (https://github.com/eniehack)
