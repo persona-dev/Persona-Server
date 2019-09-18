@@ -1,8 +1,8 @@
 = Persona-Server
 
-image:https://img.shields.io/github/license/eniehack/persona-server?style=flat-square[GitHub]
-image:https://img.shields.io/matrix/persona-b:matrix-jp.net?label=matrix&server_fqdn=matrix-jp.net&style=flat-square[Matrix]
-image:https://img.shields.io/github/v/release/eniehack/persona-server?include_prereleases&sort=semver&style=flat-square[GitHub release (latest SemVer)]
+image:https://img.shields.io/github/license/eniehack/persona-server?style=for-the-badge["AGPL v3" link="http://www.gnu.org/licenses/agpl-3.0.html"]
+image:https://img.shields.io/matrix/persona-b:matrix-jp.net?label=matrix&server_fqdn=matrix-jp.net&style=for-the-badge["Matrix:#persona-b:matrix-jp.net" link="https://matrix.to/#/!uZgXiCzSwZSsSsdIvg:matrix-jp.net?via=matrix-jp.net"]
+image:https://img.shields.io/github/v/release/eniehack/persona-server?include_prereleases&sort=semver&style=for-the-badge[GitHub release (latest SemVer)]
 image:https://goreportcard.com/badge/github.com/eniehack/persona-server[Go Report Card]
 
 a Social Network designed based on personality.
@@ -18,7 +18,7 @@ a Social Network designed based on personality.
 * Easy to deploy
 * Easy to manage
 
-== Disscuss
+== Discuss
 
 Matrix: link:https://matrix.to/#/!uZgXiCzSwZSsSsdIvg:matrix-jp.net?via=matrix-jp.net[#persona-b:matrix-jp.net]
 
