@@ -2,45 +2,62 @@ package handler
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go"
+	request "github.com/dgrijalva/jwt-go/request"
+	"github.com/eniehack/persona-server/utils"
 	"github.com/jmoiron/sqlx"
-	"github.com/labstack/echo"
 	"github.com/oklog/ulid"
 )
 
-func (h *Handler) CreatePosts(c echo.Context) error {
+func (h *Handler) CreatePosts(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	requestData := new(CreatePostParams)
 
-	User := c.Get("token").(*jwt.Token)
-	Claims := User.Claims.(jwt.MapClaims)
-
-	if err := c.Bind(requestData); err != nil {
-		return echo.ErrBadRequest
-	}
-
-	if err := c.Validate(requestData); err != nil {
-		return echo.ErrBadRequest
-	}
-	/*
-		Body := c.FormValue("body")
-		if Body == "" {
-			log.Println("No body.")
-			return echo.ErrInternalServerError
+	token, err := request.ParseFromRequest(r, request.AuthorizationHeaderExtractor, func(token *jwt.Token) (interface{}, error) {
+		_, err := token.Method.(*jwt.SigningMethodRSA)
+		if !err {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		} else {
+			return utils.ReadPublicKey()
 		}
-	*/
-	if err := h.InsertPost(Claims, requestData); err != nil {
-		log.Println(err)
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"status_code": "500",
-		})
+	})
+
+	if err != nil || !token.Valid {
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write(MakeErrorResponseBody(http.StatusUnauthorized, "invaild authorization token"))
+		return
 	}
 
-	return c.NoContent(http.StatusOK)
+	// Bind Request by requestdata.
+
+	if err := json.NewDecoder(r.Body).Decode(requestData); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(MakeErrorResponseBody(http.StatusInternalServerError, "Internal Server Error. Please contact Admin."))
+		return
+	}
+
+	if err := h.Validate.Struct(requestData); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(MakeErrorResponseBody(http.StatusBadRequest, "invaild request format"))
+		return
+	}
+
+	if err := h.InsertPost(token.Claims.(jwt.MapClaims), requestData); err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(MakeErrorResponseBody(http.StatusInternalServerError, "Internal Server Error. Please contact Admin."))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+	return
 }
 
 func (h *Handler) InsertPost(Claims jwt.MapClaims, requestData *CreatePostParams) error {

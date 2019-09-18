@@ -2,120 +2,164 @@ package handler
 
 import (
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/subtle"
 	"database/sql"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
+	"encoding/json"
+	"strconv"
 
 	"golang.org/x/crypto/argon2"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jmoiron/sqlx"
-	"github.com/labstack/echo"
+	"github.com/eniehack/persona-server/utils"
 )
 
-func (h *Handler) Login(c echo.Context) error {
-	RequestData := new(LoginParams)
-
-	if err := c.Bind(RequestData); err != nil {
-		return echo.ErrInternalServerError
+func MakeErrorResponseBody(statusCode int, detail string) []byte {
+	json, err := json.Marshal(&ErrorPayload{
+		StatusCode: strconv.Itoa(statusCode),
+		Detail: detail,
+	})
+	if err != nil {
+		log.Fatalf("MakeErrorResponseBody(): Failed to Marshal json: %s", err)
 	}
 
-	if err := c.Validate(RequestData); err != nil {
-		if useridValidation := CheckRegexp(`[^a-zA-Z0-9_]+`, RequestData.UserName); useridValidation {
-			return echo.ErrUnauthorized
-		}
+	return json
+}
+
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	requestData := new(LoginParams)
+	
+	if err := json.NewDecoder(r.Body).Decode(requestData); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(MakeErrorResponseBody(http.StatusInternalServerError, "Internal Server Error. Please contact Admin."))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
-	UserID, Password, err := h.RoadPasswordAndUserID(RequestData.UserName)
+	if err := h.Validate.Struct(requestData); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write(MakeErrorResponseBody(http.StatusUnauthorized, "incorrect request json"))
+		return
+	}
 
-	match, err := comparePasswordAndHash(RequestData.Password, Password)
+	fmt.Println(requestData)
+
+	if useridValidation := CheckRegexp(`[^a-zA-Z0-9_]+`, requestData.UserName); useridValidation {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write(MakeErrorResponseBody(http.StatusUnauthorized, "invaild userid format"))
+		return
+	}
+
+	UserID, Password, err := h.RoadPasswordAndUserID(requestData.UserName)
+
+	match, err := comparePasswordAndHash(requestData.Password, Password)
 	if err != nil {
 		log.Println(err)
-		return echo.ErrInternalServerError
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(MakeErrorResponseBody(http.StatusInternalServerError, "Internal Server Error. Please contact Admin."))
+		
+		return
 	}
 	if !match {
-		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"status_code": "401",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write(MakeErrorResponseBody(http.StatusUnauthorized, "incorrect userid or password"))
+		fmt.Println(w)
+		return 
 	}
 
 	if err := h.UpdateAt(UserID); err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"status_code": "500",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(MakeErrorResponseBody(http.StatusInternalServerError, "Internal Server Error. Please contact Admin."))
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 
 	Token, err := GenerateJWTToken(UserID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"status_code": "500",
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(MakeErrorResponseBody(http.StatusInternalServerError, "Internal Server Error. Please contact Admin."))
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{
-		"token": Token,
+	response, err := json.Marshal(&LoginResponseBody{
+		Token: Token,
 	})
+	if err != nil {
+		log.Fatalf("Login(): Failed json.Marshal() token: %s", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(MakeErrorResponseBody(http.StatusInternalServerError, "Internal Server Error. Please contact Admin."))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
+
+	return
 }
 
-func (h *Handler) Register(c echo.Context) error {
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
-	RequestData := new(RegisterParams)
+	requestData := new(RegisterParams)
 	User := new(RegisterParams)
-
-	if err := c.Bind(RequestData); err != nil {
-		return echo.ErrInternalServerError
-	}
-	if err := c.Validate(RequestData); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"status_code": "400",
-			"body": "invaild request",
-		})
+	w.Header().Set("Content-Type", "application/json")
+	
+	if err := json.NewDecoder(r.Body).Decode(requestData); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(MakeErrorResponseBody(http.StatusInternalServerError, "Internal Server Error. Please contact Admin."))
+		return
 	}
 
-	if useridValidate := CheckRegexp(`[^a-zA-Z0-9_]+`, RequestData.UserID); useridValidate {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"status_code": "400",
-			"body": "invaild userid",
-		})
+	if err := h.Validate.Struct(requestData); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(MakeErrorResponseBody(http.StatusBadRequest, "invaild request json format"))
+		return
+	}
+	
+	if useridValidation := CheckRegexp(`[^a-zA-Z0-9_]+`, requestData.UserID); useridValidation {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write(MakeErrorResponseBody(http.StatusBadRequest, "invaild userid"))
+		return
 	}
 
-	UserIDConflict, err := h.CheckUniqueUserID(strings.ToLower(RequestData.UserID))
+	UserIDConflict, err := h.CheckUniqueUserID(strings.ToLower(requestData.UserID))
 	if err != nil {
 		log.Println(err)
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"status_code": "500",
-		})
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(MakeErrorResponseBody(http.StatusInternalServerError, "Internal Server Error. Please contact Admin."))
+		return 
 	}
 	if !UserIDConflict {
-		return c.JSON(http.StatusConflict, echo.Map{
-			"status_code": "409",
-			"body": "conflict userid",
-		})
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(MakeErrorResponseBody(http.StatusInternalServerError, "Internal Server Error. Please contact Admin."))
+		return
 	}
-	User.UserID = strings.ToLower(RequestData.UserID)
+	User.UserID = strings.ToLower(requestData.UserID)
 
-	EMailConflict, err := h.CheckUniqueEmail(RequestData.EMail)
+	EMailConflict, err := h.CheckUniqueEmail(requestData.EMail)
 	if err != nil {
 		log.Println(err)
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"status_code": "500",
-		})
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(MakeErrorResponseBody(http.StatusInternalServerError, "Internal Server Error. Please contact Admin."))
+		return
 	}
 	if !EMailConflict {
-		return c.JSON(http.StatusConflict, echo.Map{
-			"status_code": "409",
-			"body": "conflict mail address",
-		})
+		w.WriteHeader(http.StatusConflict)
+		w.Write(MakeErrorResponseBody(http.StatusConflict, "email address have already used"))
+		return
 	}
-	User.EMail = RequestData.EMail
+	User.EMail = requestData.EMail
 
 	// 参考サイト(MIT License):https://www.alexedwards.net/blog/how-to-hash-and-verify-passwords-with-argon2-in-go
 
@@ -127,24 +171,38 @@ func (h *Handler) Register(c echo.Context) error {
 		keyLength:   32,
 	}
 
-	User.Password, err = generatePassword(RequestData.Password, p)
+	User.Password, err = generatePassword(requestData.Password, p)
 	if err != nil {
-		return echo.ErrInternalServerError
+		log.Fatalln(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(MakeErrorResponseBody(http.StatusInternalServerError, "Internal Server Error. Please contact Admin."))
+		return
 	}
 
 	if err := h.InsertUserData(User); err != nil {
-		log.Println(err)
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"status_code": "500",
-		})
+		log.Fatalln(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(MakeErrorResponseBody(http.StatusInternalServerError, "Internal Server Error. Please contact Admin."))
+		return
 	}
 
 	url := fmt.Sprintf("/users/%s/", User.UserID)
 
-	return c.JSON(http.StatusCreated, echo.Map{
+	returnjson, err := json.Marshal(map[string]string{
 		"status_code": "201",
 		"account_url": url,
 	})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write(MakeErrorResponseBody(http.StatusInternalServerError, "Internal Server Error. Please contact Admin."))
+		log.Fatalln(err)
+		return 
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Write(returnjson)
+
+	return
 }
 
 func generatePassword(password string, p *Argon2Params) (encodedHash string, err error) {
@@ -350,20 +408,8 @@ func (h *Handler) UpdateAt(RequestUserID string) error {
 	return nil
 }
 
-func LoadPrivateKey() (*rsa.PrivateKey, error) {
-	Key, err := ioutil.ReadFile("private-key.pem")
-	if err != nil {
-		return nil, fmt.Errorf("failed to road private key: %s", err)
-	}
-	PrivateKey, err := jwt.ParseRSAPrivateKeyFromPEM(Key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse Privatekey: %s", err)
-	}
-	return PrivateKey, nil
-}
-
 func GenerateJWTToken(UserID string) (string, error) {
-	PrivateKey, err := LoadPrivateKey()
+	PrivateKey, err := utils.LoadPrivateKey()
 	if err != nil {
 		return "", fmt.Errorf("LoadPrivateKey(): %s", err)
 	}

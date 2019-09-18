@@ -1,86 +1,24 @@
 package main
 
 import (
-	"crypto/rsa"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/eniehack/persona-server/handler"
+	"github.com/go-chi/cors"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"github.com/jmoiron/sqlx"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 	migrate "github.com/rubenv/sql-migrate"
 	"gopkg.in/go-playground/validator.v9"
 )
-
-type CustomValidator struct {
-	validator *validator.Validate
-}
-
-/*
-// UserIDValidate validate handler.RegisterParams.UserID Field.
-func UserIDValidate(fl validator.FieldLevel) bool {
-	if data := handler.CheckRegexp(`[^a-zA-Z0-9_]+`, fl.Field().String()); !data {
-		return true
-	}
-	return false
-}
-*/
-
-func (cv *CustomValidator) Validate(i interface{}) error {
-	//cv.Validator.RegisterValidation("userid", UserIDValidate)
-	return cv.validator.Struct(i)
-}
-
-func NewValidator() echo.Validator {
-	return &CustomValidator{validator: validator.New()}
-}
-
-func JWTAuthentication(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		AuthorizationHeader := c.Request().Header.Get("Authorization")
-		SplitAuthorization := strings.Split(AuthorizationHeader, " ")
-		if SplitAuthorization[0] != "Bearer" {
-			return &echo.HTTPError{
-				Code:    http.StatusUnauthorized,
-				Message: "invalid token.",
-			}
-		}
-		token, err := jwt.Parse(SplitAuthorization[1], func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-			}
-			return LookupPublicKey()
-		})
-		if err != nil || !token.Valid {
-			return &echo.HTTPError{
-				Code:     http.StatusUnauthorized,
-				Message:  "invalid token.",
-				Internal: err,
-			}
-		}
-		c.Set("token", token)
-		return next(c)
-	}
-}
-
-func LookupPublicKey() (*rsa.PublicKey, error) {
-	Key, err := ioutil.ReadFile("public-key.pem")
-	if err != nil {
-		return nil, err
-	}
-	ParsedKey, err := jwt.ParseRSAPublicKeyFromPEM(Key)
-	return ParsedKey, err
-}
 
 func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
 	switch DataBaseName {
@@ -125,44 +63,52 @@ func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
 func main() {
 	var DataBaseName string
 
-	e := echo.New()
-
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
-	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowMethods:  []string{http.MethodGet, http.MethodPost, http.MethodOptions, http.MethodDelete},
-		AllowHeaders:  []string{"Authorization", "Content-Type"},
-		MaxAge:        3600,
-		ExposeHeaders: []string{"Authorization"},
-	}))
-	e.Validator = NewValidator()
-
 	flag.StringVar(&DataBaseName, "database", "sqlite3", "Database name. sqlite3 or postgres.")
 	flag.Parse()
 
+	corsSettings := cors.New(cors.Options{
+		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodOptions, http.MethodDelete},
+		AllowedHeaders: []string{"Authorization", "Content-Type"},
+		MaxAge:         3600,
+		ExposedHeaders: []string{"Authorization"},
+	})
+
+	r := chi.NewRouter()
+
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(corsSettings.Handler)
+
+	log.Println("Persona v0.1.0-alpha.1 starting......")
+
 	db, err := SetUpDataBase(DataBaseName)
 	if err != nil {
-		e.Logger.Fatal(err)
+		log.Fatalln(err)
 	}
 
 	db.SetConnMaxLifetime(1)
 	defer db.Close()
 
-	h := &handler.Handler{DB: db}
+	log.Println("finiched set up database")
 
-	Authg := e.Group("/api/v1/auth")
-	Authg.POST("/signature", h.Login)
-	Authg.POST("/new", h.Register)
+	validator := validator.New()
 
-	Postg := e.Group("/api/v1/posts")
-	Postg.Use(JWTAuthentication)
-	Postg.POST("/new", h.CreatePosts)
+	h := &handler.Handler{
+		DB:       db,
+		Validate: validator,
+	}
 
-	e.Logger.Fatal(
-		e.Start(
-			fmt.Sprintf(
-				":%s", os.Getenv("PORT"),
+	r.Mount("/api/v1", MainRouter(h))
+	log.Println("Finished to mount router.")
+
+	if os.Getenv("PORT") == "" {
+		log.Fatal(http.ListenAndServe(":3000", r))
+	} else {
+		log.Fatal(
+			http.ListenAndServe(
+				fmt.Sprintf(":%s", os.Getenv("PORT")),
+				r,
 			),
-		),
-	)
+		)
+	}
 }
