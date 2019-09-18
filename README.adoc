@@ -1,6 +1,9 @@
 = Persona-Server
 
 image:https://img.shields.io/github/license/eniehack/persona-server?style=flat-square[GitHub]
+image:https://img.shields.io/matrix/persona-b:matrix-jp.net?label=matrix&server_fqdn=matrix-jp.net&style=flat-square[Matrix]
+image:https://img.shields.io/github/v/release/eniehack/persona-server?sort=semver&style=flat-square[GitHub release (latest SemVer)]
+image:https://goreportcard.com/badge/github.com/eniehack/persona-server[Go Report Card]
 
 a Social Network designed based on personality.
 
