@@ -2,12 +2,10 @@ package handler
 
 import (
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/subtle"
 	"database/sql"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"regexp"
@@ -20,6 +18,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jmoiron/sqlx"
+	"github.com/eniehack/persona-server/utils"
 )
 
 func MakeErrorResponseBody(statusCode int, detail string) []byte {
@@ -409,20 +408,8 @@ func (h *Handler) UpdateAt(RequestUserID string) error {
 	return nil
 }
 
-func LoadPrivateKey() (*rsa.PrivateKey, error) {
-	Key, err := ioutil.ReadFile("private-key.pem")
-	if err != nil {
-		return nil, fmt.Errorf("failed to road private key: %s", err)
-	}
-	PrivateKey, err := jwt.ParseRSAPrivateKeyFromPEM(Key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse Privatekey: %s", err)
-	}
-	return PrivateKey, nil
-}
-
 func GenerateJWTToken(UserID string) (string, error) {
-	PrivateKey, err := LoadPrivateKey()
+	PrivateKey, err := utils.LoadPrivateKey()
 	if err != nil {
 		return "", fmt.Errorf("LoadPrivateKey(): %s", err)
 	}
