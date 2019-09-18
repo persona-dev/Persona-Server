@@ -8,12 +8,10 @@ import (
 	"os"
 
 	"github.com/eniehack/persona-server/handler"
-	"github.com/eniehack/persona-server/utils"
 	"github.com/go-chi/cors"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/jwtauth"
 	"github.com/jmoiron/sqlx"
 
 	_ "github.com/lib/pq"
@@ -63,13 +61,10 @@ func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
 }
 
 func main() {
-	rsapublickey, err := utils.ReadPublicKey()
-	if err != nil {
-		log.Fatalf("init(): Failed to road RSA public key: %s", err)
-	}
-	tokenAuth := jwtauth.New("RS512", rsapublickey, nil)
-
 	var DataBaseName string
+
+	flag.StringVar(&DataBaseName, "database", "sqlite3", "Database name. sqlite3 or postgres.")
+	flag.Parse()
 
 	corsSettings := cors.New(cors.Options{
 		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodOptions, http.MethodDelete},
@@ -84,8 +79,7 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Use(corsSettings.Handler)
 
-	flag.StringVar(&DataBaseName, "database", "sqlite3", "Database name. sqlite3 or postgres.")
-	flag.Parse()
+	log.Println("Persona v0.1.0-alpha.1 starting......")
 
 	db, err := SetUpDataBase(DataBaseName)
 	if err != nil {
@@ -95,6 +89,8 @@ func main() {
 	db.SetConnMaxLifetime(1)
 	defer db.Close()
 
+	log.Println("finiched set up database")
+
 	validator := validator.New()
 
 	h := &handler.Handler{
@@ -102,18 +98,9 @@ func main() {
 		Validate: validator,
 	}
 
-	r.Route("/api/v1", func(r chi.Router) {
-		r.Route("/auth", func(r chi.Router) {
-			r.Post("/signature", h.Login)
-			r.Post("/new", h.Register)
-		})
+	r.Mount("/api/v1", MainRouter(h))
+	log.Println("Finished to mount router.")
 
-		r.Route("/posts", func(r chi.Router) {
-			r.Use(jwtauth.Verifier(tokenAuth))
-			r.Use(jwtauth.Authenticator)
-			r.Post("/new", h.CreatePosts)
-		})
-	})
 	if os.Getenv("PORT") == "" {
 		log.Fatal(http.ListenAndServe(":3000", r))
 	} else {
