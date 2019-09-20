@@ -1,0 +1,127 @@
+= install Persona
+
+== install go
+
+=== install package
+
+persona targeted go version more than 1.12.
+
+** ArchLinux: `$ sudo pacman -S go`
+** Debian: `$ sudo apt install golang-go`
+
+=== set environment value
+
+. set `$GOPATH` and write `~/.bash_profile`. ex) `export GOPATH=~/go`
+. set `$PATH` again, and write `~/.bash_profile`. ex) `export PATH=$PATH:$GOPATH/src`
+
+== clone this repo
+
+. run `$ cd /opt`.
+. run `$ sudo git clone https://github.com/persona-dev/persona-server`.
+
+== build persona
+
+. run `cd Persona-Server`.
+. run `go mod download`.
+. run `go build`.
+
+== install PostgreSQL(optional)
+
+. download and install PostgreSQL.
+.. ex) `$ sudo pacman -S postgresql` etc.
+. create user. 
+** ex) persona
+. create database.
+** ex) persona
+
+== database setting
+
+. install sql-migrate
+.. `go get -u https://github.com/rubenv/sql-migrate/sql-migrate`
+.. `go install https://github.com/rubenv/sql-migrate/sql-migrate`
+. create `dbconfig.yml` like `sample_dbconfig.yml`
+. migrate database
+.. if you use PostgreSQL, run `sql-migrate up -env="production" -config=dbconfig.yml`.
+.. if you use SQLite3, run `sql-migrate up -env="development" -config=dbconfig.yml`.
+
+NOTE: if you rewrite dbconfig.yml, you should refer to this link: https://github.com/rubenv/sql-migrate#as-a-standalone-tool
+
+== Security setting
+
+Persona uses RSA key for JWT Authorization.
+
+. generate RSA key.
+.. run `openssl genrsa 2048 -out private-key.pem`.
+.. run `openssl rsa -in private_key.pem -pubout -out public_key.pem`.
+
+== create `persona-server.service` file (optional)
+
+if you create `persona-server.service` file, you can use `journalctl` and `systemctl`.
+
+. run `sudo groupadd persona`
+. if you use useradd, run `sudo useradd -r -b /opt/Persona-Server -M -s /usr/bin/nologin -g persona persona`
+. if you use adduser, run `sudo adduser -r -b /opt/Persona-Server -M -s /usr/bin/nologin --disable-password -G persona persona`
+** parameter is examples. maybe you should change parameters.
+. create `persona-server.service` file like <<persona-server.service>>.
+
+.persona-server.service
+[source]
+----
+include::persona-server.service[]
+----
+
+NOTE: if you use SQLite3 as database, you should rewrite persona-server.service line 7, like <<persona-server-sqlite3.service>>.
+
+NOTE: Persona defalt use port localhost:3000. if you use different port, you should set environment value `PORT`, like <<persona-server-port.service>>. If you want to change database parameters, change environment variable `DATABASE_URL` in the same way
+
+.persona-server-sqlite3.service
+[source]
+----
+ExecStart=/opt/Persona-Server/persona-server
+----
+
+.persona-server-port.service
+[source]
+----
+Environment=DATABASE_URL=postgres://persona:@localhost/persona?sslmode=disable PORT=4000
+----
+
+== setup reverse-proxy 
+
+you should use link:https://ssl-config.mozilla.org/[mozilla SSL Configuration Generator] etc......
+
+=== nginx
+
+And, add to file end like <<persona.nginx>>.
+
+.persona.nginx
+[source, conf]
+----
+location / {
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $http_host;
+    proxy_pass http://127.0.0.1:3000;
+    client_max_body_size 16m;
+}
+----
+
+=== Other software(Apache, Caddy, etc.)
+
+Please make settings equivalent to <<persona.nginx>>.
+
+== run persona-server
+
+=== from systemctl
+
+if you create `persona-server.service`, you can use `systemctl`.
+
+. run `systemctl start persona`.
+. run `systemctl enable persona`.
+
+=== directly
+
+. if you don't stay `/opt/persona-server`, enter `cd /opt/persona-server`.
+. if you use SQLite3 as database, run `./persona-server`
+. if you use PostgreSQL as database, run `./persona-server`

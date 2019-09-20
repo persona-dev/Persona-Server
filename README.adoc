@@ -22,6 +22,10 @@ a Social Network designed based on personality.
 
 Matrix: link:https://matrix.to/#/!uZgXiCzSwZSsSsdIvg:matrix-jp.net?via=matrix-jp.net[#persona-b:matrix-jp.net]
 
+== install
+
+See <<./docs/install.adoc>>.
+
 == Loadmap
 
 === until v1.0.0
