@@ -22,6 +22,10 @@ a Social Network designed based on personality.
 
 Discord: link:https://discord.gg/htsQsQv[]
 
+== install
+
+See <<docs/install.adoc#>>.
+
 == Loadmap
 
 === until v1.0.0
