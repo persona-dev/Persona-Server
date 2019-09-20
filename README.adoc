@@ -24,7 +24,7 @@ Matrix: link:https://matrix.to/#/!uZgXiCzSwZSsSsdIvg:matrix-jp.net?via=matrix-jp
 
 == install
 
-See <<./docs/install.adoc>>.
+See <<docs/install.adoc#>>.
 
 == Loadmap
 
