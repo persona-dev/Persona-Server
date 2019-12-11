@@ -27,17 +27,6 @@ func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect Database: %s", err)
 		}
-
-		migrations := &migrate.FileMigrationSource{
-			Dir: "migrations/sqlite3",
-		}
-		_, err = migrate.Exec(db.DB, "sqlite3", migrations, migrate.Up)
-		if err != nil {
-			log.Println(err)
-			return nil, fmt.Errorf("failed migrations: %s", err)
-		} /* else {
-			log.Println("Applied %d migrations", n)
-		} */
 		return db, nil
 	case "postgres":
 		db, err := sqlx.Open("postgres", os.Getenv("DATABASE_URL"))
@@ -45,15 +34,6 @@ func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
 			return nil, fmt.Errorf("failed to connect Database: %s", err)
 		}
 
-		migrations := &migrate.FileMigrationSource{
-			Dir: "migrations/postgres",
-		}
-		_, err = migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
-		if err != nil {
-			return nil, fmt.Errorf("failed migrations: %s", err)
-		} /*else {
-				log.Println("Applied %d migrations", n)
-		} */
 		return db, nil
 	default:
 		return nil, fmt.Errorf("invaild database flag")
