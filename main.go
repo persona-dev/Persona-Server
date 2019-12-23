@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/eniehack/persona-server/config"
 	"github.com/eniehack/persona-server/handler"
 	"github.com/go-chi/cors"
 
@@ -15,36 +16,29 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
 	migrate "github.com/rubenv/sql-migrate"
 	"gopkg.in/go-playground/validator.v9"
 )
 
-func SetUpDataBase(DataBaseName string) (*sqlx.DB, error) {
-	switch DataBaseName {
-	case "sqlite3":
-		db, err := sqlx.Open("sqlite3", "test.db")
-		if err != nil {
-			return nil, fmt.Errorf("failed to connect Database: %s", err)
-		}
-		return db, nil
-	case "postgres":
-		db, err := sqlx.Open("postgres", os.Getenv("DATABASE_URL"))
-		if err != nil {
-			return nil, fmt.Errorf("failed to connect Database: %s", err)
-		}
-
-		return db, nil
-	default:
-		return nil, fmt.Errorf("invaild database flag")
-	}
+func SetUpDataBase(Config *config.DatabaseConfig) (*sqlx.DB, error) {
+	databaseURL := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", Config.User, Config.Password, Config.Host, Config.Database, Config.SSL)
+	db, err := sqlx.Open("postgres", databaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect Database: %s", err)
+  }
+	return db, nil
 }
 
 func main() {
-	var DataBaseName string
+	var configFilePath string
 
-	flag.StringVar(&DataBaseName, "database", "sqlite3", "Database name. sqlite3 or postgres.")
+	flag.StringVar(&configFilePath, "config", "./configs/config.toml", "config file's path.")
 	flag.Parse()
+
+	config, err := config.LoadConfig(configFilePath)
+	if err != nil {
+		log.Fatalf("Failed to load config file: %s", err)
+	}
 
 	corsSettings := cors.New(cors.Options{
 		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodOptions, http.MethodDelete},
@@ -61,9 +55,9 @@ func main() {
 
 	log.Println("Persona v0.1.0-alpha.1 starting......")
 
-	db, err := SetUpDataBase(DataBaseName)
+	db, err := SetUpDataBase(config)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf(err)
 	}
 
 	db.SetConnMaxLifetime(1)
@@ -78,7 +72,7 @@ func main() {
 		Validate: validator,
 	}
 
-	r.Mount("/api/v1", MainRouter(h))
+	r.Mount("/api/v1", Router(h))
 	log.Println("Finished to mount router.")
 
 	if os.Getenv("PORT") == "" {
