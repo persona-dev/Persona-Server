@@ -1,0 +1,20 @@
+[Unit]
+Description=Persona, a Social Network designed based on personality.
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/Persona-Server
+ExecStart=/opt/Persona-Server/persona-server -database postgres
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=persona-server
+User=persona
+Group=persona
+Environment=DATABASE_URL=postgres://persona:@localhost/persona?sslmode=disable PORT=3000
+Restart=always
+RestartSec=10
+StartLimitInterval=900
+StartLimitBurst=3
+
+[Install]
+WantedBy=multi-user.target

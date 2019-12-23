@@ -25,17 +25,7 @@ func SetUpDataBase(Config *config.DatabaseConfig) (*sqlx.DB, error) {
 	db, err := sqlx.Open("postgres", databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect Database: %s", err)
-	}
-
-	migrations := &migrate.FileMigrationSource{
-		Dir: "migrations/postgres",
-	}
-	_, err = migrate.Exec(db.DB, "postgres", migrations, migrate.Up)
-	if err != nil {
-		return nil, fmt.Errorf("failed migrations: %s", err)
-	} /*else {
-			log.Println("Applied %d migrations", n)
-	} */
+  }
 	return db, nil
 }
 
