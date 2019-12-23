@@ -25,7 +25,7 @@ func TestLoadConfig(t *testing.T) {
 		},
 	}
 
-	toml, err = LoadConfig("config.toml")
+	toml, err = LoadConfig("config.sample.toml")
 	if err != nil {
 		t.Fatalf("func TestLoadConfig() Failed: var err is not nil. detail: %s", err)
 	}

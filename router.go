@@ -12,7 +12,7 @@ import (
 
 func DefineCORS() {}
 
-func MainRouter(h *handler.Handler) http.Handler {
+func Router(h *handler.Handler) http.Handler {
 
 	rsapublickey, err := utils.ReadPublicKey()
 	if err != nil {
