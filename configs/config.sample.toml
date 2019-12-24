@@ -1,0 +1,10 @@
+[server]
+port = 3030
+
+[database]
+host = "localhost"
+port = 5432
+user = "persona"
+password = "password"
+database = "persona"
+ssl = "disable"
