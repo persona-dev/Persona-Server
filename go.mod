@@ -19,6 +19,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.11.0
 	github.com/oklog/ulid v1.3.1
 	github.com/rubenv/sql-migrate v0.0.0-20190902133344-8926f37f0bc1
+	github.com/urfave/cli/v2 v2.1.1
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7
 	golang.org/x/net v0.0.0-20190916140828-c8589233b77d // indirect
