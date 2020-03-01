@@ -1,10 +1,47 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
-	cli "github.com/urfave/cli/v2"
 	"os"
+
+	config "github.com/eniehack/persona-server/configs"
+	migrate "github.com/rubenv/sql-migrate"
+	cli "github.com/urfave/cli/v2"
 )
+
+type Gateway struct {
+	db        *sql.DB
+	migration *migrate.FileMigrationSource
+}
+
+type Repository interface {
+	ApplyMigrationsToLatest() (int, error)
+	RollbackMigrations(applyVersions uint) (int, error)
+	ApplyMigrations(applyVersions uint) (int, error)
+}
+
+func NewGateway(db *sql.DB, migration *migrate.FileMigrationSource) Repository {
+	return &Gateway{
+		db:        db,
+		migration: migration,
+	}
+}
+
+func (gateway *Gateway) ApplyMigrationsToLatest() (int, error) {
+	appliedmigrationversion, err := migrate.Exec(gateway.db, "postgres", *gateway.migration, migrate.Up)
+	return appliedmigrationversion, err
+}
+
+func (gateway *Gateway) ApplyMigrations(applyVersions uint) (int, error) {
+	appliedmigrationversion, err := migrate.ExecMax(gateway.db, "postgres", *gateway.migration, migrate.Up, int(applyVersions))
+	return appliedmigrationversion, err
+}
+
+func (gateway *Gateway) RollbackMigrations(applyVersions uint) (int, error) {
+	appliedmigrationversion, err := migrate.ExecMax(gateway.db, "postgres", *gateway.migration, migrate.Down, int(applyVersions))
+	return appliedmigrationversion, err
+}
 
 func main() {
 	app := &cli.App{
@@ -19,16 +56,39 @@ func main() {
 				Subcommands: []*cli.Command{
 					{
 						Name:    "down",
-						Aliases: []string{"back", "b"},
+						Aliases: []string{"d"},
 						Usage:   "Roll back migrations",
 						Flags: []cli.Flag{
-							&cli.IntFlag{
-								Name:  "times, t",
-								Value: 1,
+							&cli.UintFlag{
+								Name:    "times",
+								Aliases: []string{"t"},
+								Value:   1,
 							},
 						},
 						Action: func(context *cli.Context) error {
-							fmt.Printf("roll backed %d migrations.", context.Int("times"))
+							var (
+								appliedversion int
+								err            error
+							)
+							configtree, err := config.LoadConfig(context.String("file"))
+							if err != nil {
+								return err
+							}
+							connectionData := fmt.Sprintf("user=%s dbname=%s password=%s sslmode=%s", configtree.Database.User, configtree.Database.Database, configtree.Database.Password, configtree.Database.SSL)
+							db, err := sql.Open("postres", connectionData)
+							if err != nil {
+								return err
+							}
+							migrations := &migrate.FileMigrationSource{
+								Dir: "../../migrations/postgres",
+							}
+							gateway := NewGateway(db, migrations)
+
+							appliedversion, err = gateway.RollbackMigrations(context.Uint("times"))
+							if err != nil {
+								return err
+							}
+							fmt.Printf("applied %d migrations.", appliedversion)
 							return nil
 						},
 					},
@@ -37,13 +97,54 @@ func main() {
 						Aliases: []string{"u"},
 						Usage:   "",
 						Flags: []cli.Flag{
-							&cli.IntFlag{
-								Name:  "times, t",
-								Value: 1,
+							&cli.UintFlag{
+								Name:    "times",
+								Aliases: []string{"t"},
+								Value:   0,
+								Usage:   "How many versions of migration to apply",
+							},
+							&cli.BoolFlag{
+								Name:  "latest",
+								Value: false,
+								Usage: "migration to latest SQL schema",
+							},
+							&cli.StringFlag{
+								Name:     "file",
+								Aliases:  []string{"f"},
+								FilePath: "../../config.toml",
 							},
 						},
 						Action: func(context *cli.Context) error {
-							fmt.Printf("applied %d migrations.", context.Int("times"))
+							var (
+								appliedversion int
+								err            error
+							)
+							configtree, err := config.LoadConfig(context.String("file"))
+							if err != nil {
+								return err
+							}
+							connectionData := fmt.Sprintf("user=%s dbname=%s password=%s sslmode=%s", configtree.Database.User, configtree.Database.Database, configtree.Database.Password, configtree.Database.SSL)
+							db, err := sql.Open("postres", connectionData)
+							if err != nil {
+								return err
+							}
+							migrations := &migrate.FileMigrationSource{
+								Dir: "../../migrations/postgres",
+							}
+							gateway := NewGateway(db, migrations)
+
+							if context.Bool("latest") {
+								appliedversion, err = gateway.ApplyMigrationsToLatest()
+								if err != nil {
+									return err
+								}
+							} else {
+								appliedversion, err = gateway.ApplyMigrations(context.Uint("times"))
+								if err != nil {
+									return err
+								}
+							}
+							fmt.Printf("applied %d migrations.", appliedversion)
 							return nil
 						},
 					},
